@@ -1,5 +1,5 @@
 import { OptionLeg } from "./html-parser";
-import { CreditSpread, IronCondor, ShortPut } from "./strategy-builder";
+import { CreditSpread, IronCondor } from "./strategy-builder";
 
 function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): EvalResult {
 
@@ -10,8 +10,10 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
 
     //I wanna do mark and natural price
 
-    const collateral = (strategy.type == "put" ? shortLeg.strike - longLeg.strike : longLeg.strike -  shortLeg.strike) * 100
-    const quantity = Math.floor( maxCollateral  / (collateral))
+    const collateral = Math.abs(shortLeg.strike - longLeg.strike) * 100
+    const quantity = Math.floor( maxCollateral  / collateral)
+
+    // console.log({collateral, quantity})
 
     let markExpectedVal = 0
     let naturalExpectedVal = 0;
@@ -28,12 +30,16 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
 
             maxGain = (shortLegMark - longLegMark) * 100
         }
+
+        const triangleExpectedReturn = getTriangleExpectedReturns(shortLeg,longLeg,maxGain,strategy.type)
         
-        const maxLoss = collateral - maxGain
+        const maxLoss = -(collateral - maxGain)
 
         const expectedGain = shortLeg.probOTM * maxGain
         const expectedLoss = longLeg.probITM * maxLoss
-        const expectedValue =  (expectedGain - expectedLoss) * quantity
+        const expectedValue =  (expectedGain + triangleExpectedReturn + expectedLoss ) * quantity
+
+        // console.log({maxGain, maxLoss, expectedGain, expectedLoss, triangleExpectedReturn, expectedValue})
 
         if (pricingType == "naturalExpectedVal") {
             naturalExpectedVal = expectedValue
@@ -43,10 +49,11 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
     });
 
     const evalResult = {
-        strategy: strategy,
-        naturalExpectedVal: naturalExpectedVal,
-        markExpectedVal: markExpectedVal,
-        quantity: quantity 
+        strategy,
+        naturalExpectedVal,
+        markExpectedVal,
+        quantity, 
+        collateral
     }
     
     return evalResult
@@ -66,7 +73,7 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
 
     //what is the greater difference between the strikes?
     const collateral = (Math.max(shortPut.strike - longPut.strike, longCall.strike - shortCall.strike)) * 100
-    console.log({collateral})
+    // console.log({collateral})
     const quantity = Math.floor( maxCollateral  / collateral)
 
     let markExpectedVal = 10
@@ -77,7 +84,7 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
     let maxTotalGain = 0;
 
     ["naturalExpectedVal", "markExpectedVal"].forEach(pricingType => {
-        console.log("- - - ENTER: " + pricingType + " - - -")
+        // console.log(shortPut.strike + "- - - ENTER: " + pricingType + " - - -")
 
         if (pricingType == "naturalExpectedVal") {
 
@@ -98,6 +105,7 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
         const callTriangleExpectedReturn = getTriangleExpectedReturns(shortCall, longCall, maxTotalGain, "call")
 
         const probMaxTotalGain = shortPut.probOTM - shortCall.probITM // same as (short call prob otm) - (short put prob itm)
+        // console.log({probMaxTotalGain, maxTotalGain})
         const expectedMaxGain = maxTotalGain * probMaxTotalGain
 
         //find expected loss for call & put side
@@ -106,10 +114,10 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
         const expectedCallMaxLoss = -((longCall.strike - shortCall.strike) * 100 - maxTotalGain) * longCall.probITM
         const expectedPutMaxLoss = -((shortPut.strike - longPut.strike) * 100 - maxTotalGain) * longPut.probITM
         
-        console.log({expectedCallMaxLoss, expectedPutMaxLoss}, expectedCallMaxLoss + expectedPutMaxLoss)
+        // console.log({expectedCallMaxLoss, expectedPutMaxLoss}, expectedCallMaxLoss + expectedPutMaxLoss)
 
-        console.log(expectedPutMaxLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallMaxLoss)
-        console.log({expectedPutMaxLoss,putTriangleExpectedReturn ,expectedMaxGain ,callTriangleExpectedReturn , expectedCallMaxLoss})
+        // console.log(expectedPutMaxLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallMaxLoss)
+        // console.log({expectedPutMaxLoss,putTriangleExpectedReturn ,expectedMaxGain ,callTriangleExpectedReturn , expectedCallMaxLoss})
 
         const expectedReturn = (expectedPutMaxLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallMaxLoss)  * quantity
 
@@ -121,10 +129,11 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
     });
 
     const evalResult = {
-        strategy: strategy,
-        naturalExpectedVal: naturalExpectedVal,
-        markExpectedVal: markExpectedVal,
-        quantity: quantity }
+        strategy,
+        naturalExpectedVal,
+        markExpectedVal,
+        quantity,
+        collateral }
     
     return evalResult
 }
@@ -141,7 +150,7 @@ function getTriangleExpectedReturns(shortLeg: OptionLeg, longLeg: OptionLeg, max
         const longToBreakevenRatio = Math.abs(breakevenPrice - longLeg.strike) / totalDistance
         const shortToBreakevenRatio = 1 - longToBreakevenRatio
 
-        console.log({maxLoss, breakevenPrice, totalDistance, longToBreakevenRatio, shortToBreakevenRatio, maxGain})
+        // console.log({maxLoss, breakevenPrice, totalDistance, longToBreakevenRatio, shortToBreakevenRatio, maxGain})
 
         //all ratios are set, now get the loss and gain probabilities from the total (small) probability
         const totalProbability = shortLeg.probITM - longLeg.probITM
@@ -157,11 +166,14 @@ function getTriangleExpectedReturns(shortLeg: OptionLeg, longLeg: OptionLeg, max
 
 }
 
+
+
 type EvalResult = {
-    strategy: CreditSpread | IronCondor | ShortPut
+    strategy: CreditSpread | IronCondor
     naturalExpectedVal: number
     markExpectedVal: number
-    quantity: number
+    quantity: number,
+    collateral:number
 }
 
 const StrategyEvaluator = {evaluateCreditSpread, evaluateIronCondor}

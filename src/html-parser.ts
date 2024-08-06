@@ -23,15 +23,14 @@ function getTicker($: cheerio.CheerioAPI) {
     console.log(ticker)
 }
 
-function getOptions($: cheerio.CheerioAPI): {callOptions: OptionLeg[], putOptions: OptionLeg[]} {
+function getOptions($: cheerio.CheerioAPI): OptionChain {
 
     const optionTables = $("div.chain-table-container__other-columns.native-scroll.in-app-scrollbar")
 
-    let callOptions: OptionLeg[] = []
-    let putOptions: OptionLeg[] = []
+    let callOptions: {[key: number]: OptionLeg} = {}
+    let putOptions: {[key: number]: OptionLeg} = {}
 
     optionTables.each((i, el) => {
-        console.log(i)
 
         const tableEl = $(el)
 
@@ -103,7 +102,7 @@ function getOptions($: cheerio.CheerioAPI): {callOptions: OptionLeg[], putOption
                 }
             })
 
-            isCalls ? callOptions.push(currentOption) : putOptions.push(currentOption)
+            isCalls ? callOptions[currentOption.strike] = currentOption : putOptions[currentOption.strike] = currentOption
         })
 
         
@@ -134,9 +133,14 @@ type OptionLeg = {
     
 }
 
+type OptionChain = {
+    putOptions: {[key: number]: OptionLeg}
+    callOptions: {[key: number]: OptionLeg}
+}
+
 const HTMLParser = { parseHTML, getTicker }
 
-export { HTMLParser, OptionLeg }
+export { HTMLParser, OptionLeg, OptionChain}
 
 // - - - Not needed - - - 
 // function getStrikes($: cheerio.CheerioAPI) {
