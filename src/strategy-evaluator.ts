@@ -37,6 +37,8 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
 
         const expectedGain = shortLeg.probOTM * maxGain
         const expectedLoss = longLeg.probITM * maxLoss
+        
+
         const expectedValue =  (expectedGain + triangleExpectedReturn + expectedLoss ) * quantity
 
         // console.log({maxGain, maxLoss, expectedGain, expectedLoss, triangleExpectedReturn, expectedValue})
@@ -107,6 +109,7 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
         const probMaxTotalGain = shortPut.probOTM - shortCall.probITM // same as (short call prob otm) - (short put prob itm)
         // console.log({probMaxTotalGain, maxTotalGain})
         const expectedMaxGain = maxTotalGain * probMaxTotalGain
+        
 
         //find expected loss for call & put side
         //could be different for both sides. just find the expected loss for both sides
