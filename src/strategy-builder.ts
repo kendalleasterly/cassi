@@ -21,8 +21,8 @@ class StrategyBuilder {
     }
 
     isInBounds(strikePrice: number): boolean {
-        const lowerBound = this.currentPrice - this.stdDevPrice * 4
-        const upperBound = this.currentPrice + this.stdDevPrice * 4
+        const lowerBound = this.currentPrice - this.stdDevPrice * 6
+        const upperBound = this.currentPrice + this.stdDevPrice * 6
 
         return strikePrice <= upperBound && strikePrice >= lowerBound
     }
