@@ -6,17 +6,15 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
     const longLeg = strategy.longLeg
     const shortLeg = strategy.shortLeg
 
-    //put credit spread first
-
-    //I wanna do mark and natural price
-
     const collateral = Math.abs(shortLeg.strike - longLeg.strike) * 100
     const quantity = Math.floor( maxCollateral  / collateral)
 
-    // console.log({collateral, quantity})
-
     let markExpectedVal = 0
-    let naturalExpectedVal = 0;
+    let naturalExpectedVal = 0
+
+    let markBreakEvens: number[] = [];
+    let naturalBreakEvens: number[] = [];
+
 
     ["markExpectedVal", "naturalExpectedVal"].forEach(pricingType => {
         
@@ -31,7 +29,7 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
             maxGain = (shortLegMark - longLegMark) * 100
         }
 
-        const triangleExpectedReturn = getTriangleExpectedReturns(shortLeg,longLeg,maxGain,strategy.type)
+        const {expectedReturn, breakEven} = getTriangleExpectedReturns(shortLeg,longLeg,maxGain,strategy.type)
         
         const maxLoss = -(collateral - maxGain)
 
@@ -39,23 +37,25 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
         const expectedLoss = longLeg.probITM * maxLoss
         
 
-        const expectedValue =  (expectedGain + triangleExpectedReturn + expectedLoss ) * quantity
-
-        // console.log({maxGain, maxLoss, expectedGain, expectedLoss, triangleExpectedReturn, expectedValue})
+        const expectedValue =  (expectedGain + expectedReturn + expectedLoss ) * quantity
 
         if (pricingType == "naturalExpectedVal") {
             naturalExpectedVal = expectedValue
+            naturalBreakEvens = [breakEven]
         } else {
             markExpectedVal = expectedValue
+            markBreakEvens = [breakEven]
         }
     });
 
-    const evalResult = {
+    const evalResult: EvalResult = {
         strategy,
         naturalExpectedVal,
         markExpectedVal,
         quantity, 
-        collateral
+        collateral,
+        naturalBreakEvens,
+        markBreakEvens
     }
     
     return evalResult
@@ -68,25 +68,22 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
     const shortCall = strategy.shortCall
     const longCall = strategy.longCall
     
-
-    //put credit spread first
-
-    //I wanna do mark and natural price
-
-    //what is the greater difference between the strikes?
     const collateral = (Math.max(shortPut.strike - longPut.strike, longCall.strike - shortCall.strike)) * 100
-    // console.log({collateral})
+
     const quantity = Math.floor( maxCollateral  / collateral)
 
-    let markExpectedVal = 10
-    let naturalExpectedVal = 10
+    let markExpectedVal = 0
+    let naturalExpectedVal = 0
+
+    let markBreakEvens: number[] = []
+    let naturalBreakEvens: number[] = []
 
     let maxShortPutGain = 0
     let maxShortCallGain = 0
     let maxTotalGain = 0;
 
     ["naturalExpectedVal", "markExpectedVal"].forEach(pricingType => {
-        // console.log(shortPut.strike + "- - - ENTER: " + pricingType + " - - -")
+
 
         if (pricingType == "naturalExpectedVal") {
 
@@ -103,54 +100,56 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
 
         maxTotalGain = maxShortPutGain + maxShortCallGain
 
-        const putTriangleExpectedReturn = getTriangleExpectedReturns(shortPut, longPut, maxTotalGain, "put")
-        const callTriangleExpectedReturn = getTriangleExpectedReturns(shortCall, longCall, maxTotalGain, "call")
+        const {expectedReturn: putTriangleExpectedReturn, breakEven: putBreakEven} = getTriangleExpectedReturns(shortPut, longPut, maxTotalGain, "put")
+        const {expectedReturn: callTriangleExpectedReturn, breakEven: callBreakEven} = getTriangleExpectedReturns(shortCall, longCall, maxTotalGain, "call")
 
         const probMaxTotalGain = shortPut.probOTM - shortCall.probITM // same as (short call prob otm) - (short put prob itm)
-        // console.log({probMaxTotalGain, maxTotalGain})
+
         const expectedMaxGain = maxTotalGain * probMaxTotalGain
         
 
         //find expected loss for call & put side
         //could be different for both sides. just find the expected loss for both sides
 
-        const expectedCallMaxLoss = -((longCall.strike - shortCall.strike) * 100 - maxTotalGain) * longCall.probITM
-        const expectedPutMaxLoss = -((shortPut.strike - longPut.strike) * 100 - maxTotalGain) * longPut.probITM
+        const expectedCallLoss = -((longCall.strike - shortCall.strike) * 100 - maxTotalGain) * longCall.probITM
+        const expectedPutLoss = -((shortPut.strike - longPut.strike) * 100 - maxTotalGain) * longPut.probITM
         
-        // console.log({expectedCallMaxLoss, expectedPutMaxLoss}, expectedCallMaxLoss + expectedPutMaxLoss)
 
-        // console.log(expectedPutMaxLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallMaxLoss)
-        // console.log({expectedPutMaxLoss,putTriangleExpectedReturn ,expectedMaxGain ,callTriangleExpectedReturn , expectedCallMaxLoss})
 
-        const expectedReturn = (expectedPutMaxLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallMaxLoss)  * quantity
+        const expectedReturn = (expectedPutLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallLoss)  * quantity
 
         if (pricingType == "naturalExpectedVal") {
             naturalExpectedVal = expectedReturn
+            naturalBreakEvens = [Math.min(putBreakEven, callBreakEven), Math.max(putBreakEven, callBreakEven)]
         } else {
             markExpectedVal = expectedReturn
+            markBreakEvens = [Math.min(putBreakEven, callBreakEven), Math.max(putBreakEven, callBreakEven)]
         }
     });
 
-    const evalResult = {
+    const evalResult: EvalResult = {
         strategy,
         naturalExpectedVal,
         markExpectedVal,
         quantity,
-        collateral }
+        collateral,
+        markBreakEvens,
+        naturalBreakEvens
+     }
     
     return evalResult
 }
 
 
-function getTriangleExpectedReturns(shortLeg: OptionLeg, longLeg: OptionLeg, maxGain: number, type: "call" | "put" ): number {
+function getTriangleExpectedReturns(shortLeg: OptionLeg, longLeg: OptionLeg, maxGain: number, type: "call" | "put" ): {expectedReturn: number, breakEven: number} {
         //find the breakeven
 
         const maxLoss = -Math.abs(shortLeg.strike - longLeg.strike) * 100 + maxGain
-        const breakevenPrice = shortLeg.strike + maxGain * (type == "put" ? -1 : 1) / 100
+        const breakEven = shortLeg.strike + maxGain * (type == "put" ? -1 : 1) / 100
         
        
         const totalDistance = Math.abs(shortLeg.strike - longLeg.strike)
-        const longToBreakevenRatio = Math.abs(breakevenPrice - longLeg.strike) / totalDistance
+        const longToBreakevenRatio = Math.abs(breakEven - longLeg.strike) / totalDistance
         const shortToBreakevenRatio = 1 - longToBreakevenRatio
 
         // console.log({maxLoss, breakevenPrice, totalDistance, longToBreakevenRatio, shortToBreakevenRatio, maxGain})
@@ -165,7 +164,7 @@ function getTriangleExpectedReturns(shortLeg: OptionLeg, longLeg: OptionLeg, max
         const expectedGain = shortToBreakevenGain * (totalProbability * shortToBreakevenRatio)
         const expectedLoss = longToBreakevenLoss * (totalProbability * shortToBreakevenRatio)
 
-        return expectedGain + expectedLoss
+        return {expectedReturn: expectedGain + expectedLoss, breakEven}
 
 }
 
@@ -176,7 +175,15 @@ type EvalResult = {
     naturalExpectedVal: number
     markExpectedVal: number
     quantity: number,
-    collateral:number
+    collateral:number,
+    markBreakEvens: number[],
+    naturalBreakEvens: number[],
+}
+
+type SubResult = {
+    price: number,
+    maxLoss: number,
+    breakEvens: number[]
 }
 
 const StrategyEvaluator = {evaluateCreditSpread, evaluateIronCondor}

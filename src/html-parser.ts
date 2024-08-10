@@ -88,9 +88,6 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
                     const value = Number($(spanEl).text().replace("%", ""))
 
                     switch (property) {
-                        case "GAMMA-cell-value":
-                            currentOption.gamma = value
-                            break;
                         case "PROBABILITY_ITM-cell-value":
                             currentOption.probITM = value / 100
                             break;
@@ -124,11 +121,9 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
 type OptionLeg = {
     bid: number ,
     ask: number,
-    gamma: number
     probOTM: number,
     probITM: number,
-    strike: number 
-    isOTM: Boolean
+    strike: number
     type: "call" | "put"
     
 }
