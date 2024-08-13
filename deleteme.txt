@@ -1,472 +1,382 @@
 {
   strategy: {
-    longPut: {
-      type: 'put',
-      strike: 202.5,
-      isOTM: true,
-      bid: 0.18,
-      ask: 0.21,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 207.5,
-      isOTM: true,
-      bid: 0.4,
-      ask: 0.42,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
+    shortLeg: {
       type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 87.84858307359502,
-  markExpectedVal: 98.40986840930404,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 206.03, 221.47 ],
-  naturalBreakEvens: [ 206.1, 221.4 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 200,
-      isOTM: true,
-      bid: 0.14,
-      ask: 0.16,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 84.7783558524231,
-  markExpectedVal: 95.51629261640261,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 203.62, 221.38 ],
-  naturalBreakEvens: [ 203.69, 221.31 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 210,
-      isOTM: true,
-      bid: 0.62,
-      ask: 0.65,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 82.34066724315169,
-  markExpectedVal: 93.27681751144883,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 208.385, 221.615 ],
-  naturalBreakEvens: [ 208.46, 221.54 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 197.5,
-      isOTM: true,
-      bid: 0.11,
-      ask: 0.12,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 202.5,
-      isOTM: true,
-      bid: 0.18,
-      ask: 0.21,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 82.20849326475866,
-  markExpectedVal: 92.24012554357313,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 201.165, 221.335 ],
-  naturalBreakEvens: [ 201.23, 221.27 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 195,
-      isOTM: true,
-      bid: 0.09,
-      ask: 0.1,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 200,
-      isOTM: true,
-      bid: 0.14,
-      ask: 0.16,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 80.12596632235592,
-  markExpectedVal: 89.39339895845946,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 198.69, 221.31 ],
-  naturalBreakEvens: [ 198.75, 221.25 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 190,
-      isOTM: true,
-      bid: 0.05,
-      ask: 0.06,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 195,
-      isOTM: true,
-      bid: 0.09,
-      ask: 0.1,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 78.85386049973813,
-  markExpectedVal: 87.34496045264132,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 193.705, 221.295 ],
-  naturalBreakEvens: [ 193.76, 221.24 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 192.5,
-      isOTM: true,
-      bid: 0.06,
-      ask: 0.08,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 197.5,
-      isOTM: true,
-      bid: 0.11,
-      ask: 0.12,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 78.81279829950857,
-  markExpectedVal: 88.0770789107388,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 196.2, 221.3 ],
-  naturalBreakEvens: [ 196.26, 221.24 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 197.5,
-      isOTM: true,
-      bid: 0.11,
-      ask: 0.12,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 207.5,
-      isOTM: true,
-      bid: 0.4,
-      ask: 0.42,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 230,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.04,
-      ask: 0.05
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
-  },
-  naturalExpectedVal: 78.62343955479128,
-  markExpectedVal: 81.33022410180263,
-  quantity: 1,
-  collateral: 1000,
-  markBreakEvens: [ 205.675, 221.825 ],
-  naturalBreakEvens: [ 205.72, 221.78 ]
-}
-- - - MARK - - - 
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 207.5,
-      isOTM: true,
-      bid: 0.4,
-      ask: 0.42,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    },
-    shortCall: {
-      type: 'call',
-      strike: 217.5,
+      strike: 212.5,
       isOTM: false,
       probITM: 1,
       probOTM: 0,
-      bid: 2.74,
-      ask: 2.85
-    }
-  },
-  naturalExpectedVal: 63.03443944931947,
-  markExpectedVal: 101.33738647555924,
-  quantity: 4,
-  collateral: 250,
-  markBreakEvens: [ 206.145, 218.855 ],
-  naturalBreakEvens: [ 206.25, 218.75 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
+      bid: 9.5,
+      ask: 9.6
     },
-    shortPut: {
-      type: 'put',
-      strike: 207.5,
-      isOTM: true,
-      bid: 0.4,
-      ask: 0.42,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
+    longLeg: {
       type: 'call',
       strike: 222.5,
       isOTM: true,
       probITM: 1,
       probOTM: 0,
-      bid: 0.76,
-      ask: 0.8
+      bid: 1.82,
+      ask: 1.85
     },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
+    type: 'call'
   },
-  naturalExpectedVal: 74.83311052304097,
-  markExpectedVal: 99.27515942647325,
-  quantity: 4,
-  collateral: 250,
-  markBreakEvens: [ 206.57, 220.93 ],
-  naturalBreakEvens: [ 206.64, 220.86 ]
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 56.63025905226561,
+    breakEvens: [ 220.215 ],
+    maxGain: 771.5000000000001,
+    maxLoss: -228.4999999999999
+  },
+  natural: {
+    expectedValue: 50.011124286280065,
+    breakEvens: [ 220.15 ],
+    maxGain: 765,
+    maxLoss: -235
+  }
 }
 {
   strategy: {
     shortLeg: {
       type: 'put',
-      strike: 230,
+      strike: 235,
       isOTM: false,
-      bid: 12.25,
-      ask: 12.7,
+      bid: 13.4,
+      ask: 13.65,
+      probOTM: 1,
+      probITM: 0
+    },
+    longLeg: {
+      type: 'put',
+      strike: 225,
+      isOTM: false,
+      bid: 4.2,
+      ask: 4.3,
+      probOTM: 1,
+      probITM: 0
+    },
+    type: 'put'
+  },
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 67.5217030557163,
+    breakEvens: [ 225.725 ],
+    maxGain: 927.5,
+    maxLoss: -72.5
+  },
+  natural: {
+    expectedValue: 48.448530067007596,
+    breakEvens: [ 225.9 ],
+    maxGain: 910.0000000000001,
+    maxLoss: -89.99999999999989
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'call',
+      strike: 222.5,
+      isOTM: true,
+      probITM: 1,
+      probOTM: 0,
+      bid: 1.82,
+      ask: 1.85
+    },
+    longLeg: {
+      type: 'call',
+      strike: 232.5,
+      isOTM: true,
+      probITM: 1,
+      probOTM: 0,
+      bid: 0.05,
+      ask: 0.06
+    },
+    type: 'call'
+  },
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 47.29812494819549,
+    breakEvens: [ 224.28 ],
+    maxGain: 178,
+    maxLoss: -822
+  },
+  natural: {
+    expectedValue: 46.20313881433775,
+    breakEvens: [ 224.26 ],
+    maxGain: 176,
+    maxLoss: -824
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'call',
+      strike: 210,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 11.8,
+      ask: 12
+    },
+    longLeg: {
+      type: 'call',
+      strike: 220,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 3.25,
+      ask: 3.3
+    },
+    type: 'call'
+  },
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 58.442916490437725,
+    breakEvens: [ 218.625 ],
+    maxGain: 862.5,
+    maxLoss: -137.5
+  },
+  natural: {
+    expectedValue: 44.93955791291664,
+    breakEvens: [ 218.5 ],
+    maxGain: 850,
+    maxLoss: -150
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'call',
+      strike: 217.5,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 5.1,
+      ask: 5.2
+    },
+    longLeg: {
+      type: 'call',
+      strike: 222.5,
+      isOTM: true,
+      probITM: 1,
+      probOTM: 0,
+      bid: 1.82,
+      ask: 1.85
+    },
+    type: 'call'
+  },
+  quantity: 2,
+  collateral: 500,
+  mark: {
+    expectedValue: 56.42737724679152,
+    breakEvens: [ 220.815 ],
+    maxGain: 663.0000000000001,
+    maxLoss: -336.9999999999999
+  },
+  natural: {
+    expectedValue: 44.18931398095295,
+    breakEvens: [ 220.75 ],
+    maxGain: 649.9999999999999,
+    maxLoss: -350.0000000000001
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'put',
+      strike: 217.5,
+      isOTM: true,
+      bid: 0.96,
+      ask: 0.99,
+      probOTM: 1,
+      probITM: 0
+    },
+    longLeg: {
+      type: 'put',
+      strike: 207.5,
+      isOTM: true,
+      bid: 0.18,
+      ask: 0.19,
+      probOTM: 1,
+      probITM: 0
+    },
+    type: 'put'
+  },
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 42.85152595386116,
+    breakEvens: [ 216.71 ],
+    maxGain: 79,
+    maxLoss: -921
+  },
+  natural: {
+    expectedValue: 41.51095346376991,
+    breakEvens: [ 216.73 ],
+    maxGain: 77,
+    maxLoss: -923
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'call',
+      strike: 220,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 3.25,
+      ask: 3.3
+    },
+    longLeg: {
+      type: 'call',
+      strike: 222.5,
+      isOTM: true,
+      probITM: 1,
+      probOTM: 0,
+      bid: 1.82,
+      ask: 1.85
+    },
+    type: 'call'
+  },
+  quantity: 4,
+  collateral: 250,
+  mark: {
+    expectedValue: 56.221779262517195,
+    breakEvens: [ 221.44 ],
+    maxGain: 576,
+    maxLoss: -424
+  },
+  natural: {
+    expectedValue: 41.175276456037636,
+    breakEvens: [ 221.4 ],
+    maxGain: 560,
+    maxLoss: -440
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'put',
+      strike: 220,
+      isOTM: true,
+      bid: 1.62,
+      ask: 1.64,
+      probOTM: 1,
+      probITM: 0
+    },
+    longLeg: {
+      type: 'put',
+      strike: 210,
+      isOTM: true,
+      bid: 0.25,
+      ask: 0.26,
+      probOTM: 1,
+      probITM: 0
+    },
+    type: 'put'
+  },
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 40.830561591799466,
+    breakEvens: [ 218.625 ],
+    maxGain: 137.5,
+    maxLoss: -862.5
+  },
+  natural: {
+    expectedValue: 40.025499546812554,
+    breakEvens: [ 218.64 ],
+    maxGain: 136,
+    maxLoss: -864
+  }
+}
+- - - MARK - - - 
+{
+  strategy: {
+    shortLeg: {
+      type: 'call',
+      strike: 217.5,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 5.1,
+      ask: 5.2
+    },
+    longLeg: {
+      type: 'call',
+      strike: 220,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 3.25,
+      ask: 3.3
+    },
+    type: 'call'
+  },
+  quantity: 4,
+  collateral: 250,
+  mark: {
+    expectedValue: 69.42816913911973,
+    breakEvens: [ 219.375 ],
+    maxGain: 750.0000000000002,
+    maxLoss: -249.99999999999977
+  },
+  natural: {
+    expectedValue: 39.56290509576929,
+    breakEvens: [ 219.3 ],
+    maxGain: 719.9999999999999,
+    maxLoss: -280.0000000000001
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'put',
+      strike: 235,
+      isOTM: false,
+      bid: 13.4,
+      ask: 13.65,
+      probOTM: 1,
+      probITM: 0
+    },
+    longLeg: {
+      type: 'put',
+      strike: 225,
+      isOTM: false,
+      bid: 4.2,
+      ask: 4.3,
+      probOTM: 1,
+      probITM: 0
+    },
+    type: 'put'
+  },
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 67.5217030557163,
+    breakEvens: [ 225.725 ],
+    maxGain: 927.5,
+    maxLoss: -72.5
+  },
+  natural: {
+    expectedValue: 48.448530067007596,
+    breakEvens: [ 225.9 ],
+    maxGain: 910.0000000000001,
+    maxLoss: -89.99999999999989
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'put',
+      strike: 237.5,
+      isOTM: false,
+      bid: 15.9,
+      ask: 16.25,
       probOTM: 1,
       probITM: 0
     },
@@ -474,247 +384,210 @@
       type: 'put',
       strike: 227.5,
       isOTM: false,
-      bid: 9.35,
-      ask: 10.25,
+      bid: 6.2,
+      ask: 6.35,
       probOTM: 1,
       probITM: 0
     },
     type: 'put'
   },
-  naturalExpectedVal: -171.32430188696466,
-  markExpectedVal: 99.21197574160445,
-  quantity: 4,
-  collateral: 250,
-  naturalBreakEvens: [ 228 ],
-  markBreakEvens: [ 227.325 ]
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 62.596376487189495,
+    breakEvens: [ 227.7 ],
+    maxGain: 979.9999999999999,
+    maxLoss: -20.000000000000114
+  },
+  natural: {
+    expectedValue: 35.882885913653006,
+    breakEvens: [ 227.95 ],
+    maxGain: 955.0000000000001,
+    maxLoss: -44.999999999999886
+  }
 }
 {
   strategy: {
-    longPut: {
-      type: 'put',
-      strike: 202.5,
-      isOTM: true,
-      bid: 0.18,
-      ask: 0.21,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
+    shortLeg: {
       type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    },
-    shortCall: {
-      type: 'call',
-      strike: 217.5,
+      strike: 210,
       isOTM: false,
       probITM: 1,
       probOTM: 0,
-      bid: 2.74,
-      ask: 2.85
-    }
-  },
-  naturalExpectedVal: 59.03796177453558,
-  markExpectedVal: 99.13658670991177,
-  quantity: 4,
-  collateral: 250,
-  markBreakEvens: [ 203.7, 218.8 ],
-  naturalBreakEvens: [ 203.81, 218.69 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 202.5,
-      isOTM: true,
-      bid: 0.18,
-      ask: 0.21,
-      probOTM: 1,
-      probITM: 0
+      bid: 11.8,
+      ask: 12
     },
-    shortPut: {
-      type: 'put',
-      strike: 207.5,
-      isOTM: true,
-      bid: 0.4,
-      ask: 0.42,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
+    longLeg: {
       type: 'call',
       strike: 220,
-      isOTM: true,
+      isOTM: false,
       probITM: 1,
       probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
+      bid: 3.25,
+      ask: 3.3
+    },
+    type: 'call'
   },
-  naturalExpectedVal: 87.84858307359502,
-  markExpectedVal: 98.40986840930404,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 206.03, 221.47 ],
-  naturalBreakEvens: [ 206.1, 221.4 ]
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 58.442916490437725,
+    breakEvens: [ 218.625 ],
+    maxGain: 862.5,
+    maxLoss: -137.5
+  },
+  natural: {
+    expectedValue: 44.93955791291664,
+    breakEvens: [ 218.5 ],
+    maxGain: 850,
+    maxLoss: -150
+  }
 }
 {
   strategy: {
-    longPut: {
-      type: 'put',
-      strike: 202.5,
-      isOTM: true,
-      bid: 0.18,
-      ask: 0.21,
-      probOTM: 1,
-      probITM: 0
+    shortLeg: {
+      type: 'call',
+      strike: 212.5,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 9.5,
+      ask: 9.6
     },
-    shortPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
+    longLeg: {
       type: 'call',
       strike: 222.5,
       isOTM: true,
       probITM: 1,
       probOTM: 0,
-      bid: 0.76,
-      ask: 0.8
+      bid: 1.82,
+      ask: 1.85
     },
-    shortCall: {
+    type: 'call'
+  },
+  quantity: 1,
+  collateral: 1000,
+  mark: {
+    expectedValue: 56.63025905226561,
+    breakEvens: [ 220.215 ],
+    maxGain: 771.5000000000001,
+    maxLoss: -228.4999999999999
+  },
+  natural: {
+    expectedValue: 50.011124286280065,
+    breakEvens: [ 220.15 ],
+    maxGain: 765,
+    maxLoss: -235
+  }
+}
+{
+  strategy: {
+    shortLeg: {
       type: 'call',
-      strike: 220,
+      strike: 217.5,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 5.1,
+      ask: 5.2
+    },
+    longLeg: {
+      type: 'call',
+      strike: 222.5,
       isOTM: true,
       probITM: 1,
       probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
+      bid: 1.82,
+      ask: 1.85
+    },
+    type: 'call'
   },
-  naturalExpectedVal: 69.88507088751894,
-  markExpectedVal: 96.25435193670046,
+  quantity: 2,
+  collateral: 500,
+  mark: {
+    expectedValue: 56.42737724679152,
+    breakEvens: [ 220.815 ],
+    maxGain: 663.0000000000001,
+    maxLoss: -336.9999999999999
+  },
+  natural: {
+    expectedValue: 44.18931398095295,
+    breakEvens: [ 220.75 ],
+    maxGain: 649.9999999999999,
+    maxLoss: -350.0000000000001
+  }
+}
+{
+  strategy: {
+    shortLeg: {
+      type: 'call',
+      strike: 220,
+      isOTM: false,
+      probITM: 1,
+      probOTM: 0,
+      bid: 3.25,
+      ask: 3.3
+    },
+    longLeg: {
+      type: 'call',
+      strike: 222.5,
+      isOTM: true,
+      probITM: 1,
+      probOTM: 0,
+      bid: 1.82,
+      ask: 1.85
+    },
+    type: 'call'
+  },
   quantity: 4,
   collateral: 250,
-  markBreakEvens: [ 204.125, 220.875 ],
-  naturalBreakEvens: [ 204.2, 220.8 ]
+  mark: {
+    expectedValue: 56.221779262517195,
+    breakEvens: [ 221.44 ],
+    maxGain: 576,
+    maxLoss: -424
+  },
+  natural: {
+    expectedValue: 41.175276456037636,
+    breakEvens: [ 221.4 ],
+    maxGain: 560,
+    maxLoss: -440
+  }
 }
 {
   strategy: {
-    longPut: {
-      type: 'put',
-      strike: 200,
-      isOTM: true,
-      bid: 0.14,
-      ask: 0.16,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
+    shortLeg: {
       type: 'call',
-      strike: 225,
-      isOTM: true,
+      strike: 215,
+      isOTM: false,
       probITM: 1,
       probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
+      bid: 7.2,
+      ask: 7.3
     },
-    shortCall: {
+    longLeg: {
       type: 'call',
       strike: 220,
-      isOTM: true,
+      isOTM: false,
       probITM: 1,
       probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
+      bid: 3.25,
+      ask: 3.3
+    },
+    type: 'call'
   },
-  naturalExpectedVal: 84.7783558524231,
-  markExpectedVal: 95.51629261640261,
   quantity: 2,
   collateral: 500,
-  markBreakEvens: [ 203.62, 221.38 ],
-  naturalBreakEvens: [ 203.69, 221.31 ]
-}
-{
-  strategy: {
-    longPut: {
-      type: 'put',
-      strike: 205,
-      isOTM: true,
-      bid: 0.26,
-      ask: 0.29,
-      probOTM: 1,
-      probITM: 0
-    },
-    shortPut: {
-      type: 'put',
-      strike: 210,
-      isOTM: true,
-      bid: 0.62,
-      ask: 0.65,
-      probOTM: 1,
-      probITM: 0
-    },
-    longCall: {
-      type: 'call',
-      strike: 225,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 0.3,
-      ask: 0.34
-    },
-    shortCall: {
-      type: 'call',
-      strike: 220,
-      isOTM: true,
-      probITM: 1,
-      probOTM: 0,
-      bid: 1.55,
-      ask: 1.6
-    }
+  mark: {
+    expectedValue: 50.29427993402175,
+    breakEvens: [ 218.975 ],
+    maxGain: 795,
+    maxLoss: -205
   },
-  naturalExpectedVal: 82.34066724315169,
-  markExpectedVal: 93.27681751144883,
-  quantity: 2,
-  collateral: 500,
-  markBreakEvens: [ 208.385, 221.615 ],
-  naturalBreakEvens: [ 208.46, 221.54 ]
+  natural: {
+    expectedValue: 34.996520275046564,
+    breakEvens: [ 218.9 ],
+    maxGain: 780.0000000000001,
+    maxLoss: -219.9999999999999
+  }
 }

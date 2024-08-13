@@ -45,10 +45,12 @@ function getTopStrategies(ticker: string, maxCollateral: number, currentPrice: n
 
 	const strategyBuilder = new StrategyBuilder(currentPrice, volatility, timeToExp, putOptions, callOptions, maxCollateral)
 
+	console.log("finding best credit spreads...")
 	const allCreditSpreads = strategyBuilder.findBestCreditSpread()
+	console.log("finding best iron condor...")
 	const allIronCondors = strategyBuilder.findBestIronCondor()
 
-	const { topMarkStrategies, topNaturalStrategies } = strategyBuilder.getTopNaturalAndMark([...allCreditSpreads, ...allIronCondors], 8)
+	const { topMarkResults, topNaturalResults } = strategyBuilder.getTopResults([...allCreditSpreads, ...allIronCondors], 8)
 
 
 }
@@ -56,23 +58,22 @@ function getTopStrategies(ticker: string, maxCollateral: number, currentPrice: n
 async function main(ticker: string, time: number) {
 
 
-	const twelveDataModel = new TwelveDataModel(ticker, "5min", 12 * 6.5 * 1 )
+	const twelveDataModel = new TwelveDataModel(ticker, "5min", 12 * 6.5 * 3 )
 
 	const stats = await twelveDataModel.getVolatilityLogDistribution()
 	const meanVolatility = Math.exp(stats.mean)
-	console.log({meanVolatility})
+	console.log({meanVolatility}, Math.exp(stats.stdDev))
 	
 	const SMAs = await twelveDataModel.getAvgPrices("1h", 1)
 	const SMA = Object.values(SMAs)[0]
 	console.log({SMA})
 
 	getTopStrategies(ticker, 1000, SMA, meanVolatility, time)
-	// getTopStrategies("AAPL", 1000, 215, 0.24, 5 / 252)
 }
 
 
-main("AAPL", 3 / 252)
-// getTopStrategies("AAPL", 1000, 217.2, .32, 3/252)
+// main("AAPL", 3 / 252)
+getTopStrategies("AAPL", 1000, 221.26465, 0.17755282783505327, 3/252)
 
 
 

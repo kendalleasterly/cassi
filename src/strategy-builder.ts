@@ -118,27 +118,27 @@ class StrategyBuilder {
         return allStratagies
     }
     
-    getTopNaturalAndMark(allStratagies: EvalResult[], limit: number) {
-        let topNaturalStrategies = [...allStratagies]
-        let topMarkStrategies = [...allStratagies]
+    getTopResults(allStratagies: EvalResult[], limit: number) {
+        let topNaturalResults = [...allStratagies]
+        let topMarkResults = [...allStratagies]
     
-        topNaturalStrategies.sort((a, b) => {
+        topNaturalResults.sort((a, b) => {
             return b.natural.expectedValue - a.natural.expectedValue
         })
     
-        topMarkStrategies.sort((a, b) => {
+        topMarkResults.sort((a, b) => {
             return b.mark.expectedValue - a.mark.expectedValue
         })
     
-        topNaturalStrategies = topNaturalStrategies.slice(0, limit)
-        topMarkStrategies = topMarkStrategies.slice(0, limit)
+        topNaturalResults = topNaturalResults.slice(0, limit)
+        topMarkResults = topMarkResults.slice(0, limit)
         
         console.log("- - - NATURAL - - - ")
-        topNaturalStrategies.forEach((strat, _) => console.log(strat))
+        topNaturalResults.forEach((result, _) => console.log(result))
         console.log("- - - MARK - - - ")
-        topMarkStrategies.forEach((strat, _) => console.log(strat))
+        topMarkResults.forEach((result, _) => console.log(result))
     
-        return {topNaturalStrategies, topMarkStrategies}
+        return {topNaturalResults, topMarkResults}
     }
 
     /**

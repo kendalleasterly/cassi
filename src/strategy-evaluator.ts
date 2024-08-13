@@ -48,19 +48,19 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
         const expectedGain = shortLeg.probOTM * maxGain
         const expectedLoss = longLeg.probITM * maxLoss
         
-        const expectedValue =  (expectedGain + triangleExpectedReturn + expectedLoss ) * quantity
+        const expectedValue =  (expectedGain + triangleExpectedReturn + expectedLoss )
 
         if (pricingType == "naturalExpectedVal") {
-            result.natural.expectedValue = expectedValue
+            result.natural.expectedValue = expectedValue * quantity
             result.natural.breakEvens = [breakEven]
-            result.natural.maxLoss = maxLoss
-            result.natural.maxGain = maxGain
+            result.natural.maxLoss = maxLoss  * quantity
+            result.natural.maxGain = maxGain  * quantity
 
         } else {
-            result.mark.expectedValue = expectedValue
+            result.mark.expectedValue = expectedValue  * quantity
             result.mark.breakEvens = [breakEven]
-            result.mark.maxLoss = maxLoss
-            result.mark.maxGain = maxGain
+            result.mark.maxLoss = maxLoss * quantity
+            result.mark.maxGain = maxGain * quantity
         }
     });
     
@@ -131,22 +131,22 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
         const expectedCallLoss = -((longCall.strike - shortCall.strike) * 100 - maxTotalGain) * longCall.probITM
         const expectedPutLoss = -((shortPut.strike - longPut.strike) * 100 - maxTotalGain) * longPut.probITM
 
-        const expectedReturn = (expectedPutLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallLoss)  * quantity
+        const expectedReturn = (expectedPutLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallLoss)  
 
         const maxLoss = -Math.max((longCall.strike - shortCall.strike) * 100 - maxTotalGain, (shortPut.strike - longPut.strike) * 100 - maxTotalGain)
         const breakEvens = [Math.min(putBreakEven, callBreakEven), Math.max(putBreakEven, callBreakEven)]
 
         if (pricingType == "naturalExpectedVal") {
-            result.natural.expectedValue = expectedReturn
+            result.natural.expectedValue = expectedReturn  * quantity
             result.natural.breakEvens = breakEvens
-            result.natural.maxGain = maxTotalGain
-            result.natural.maxLoss = maxLoss
+            result.natural.maxGain = maxTotalGain  * quantity
+            result.natural.maxLoss = maxLoss  * quantity
             // #todo add in the max value here
         } else {
-            result.mark.expectedValue = expectedReturn
+            result.mark.expectedValue = expectedReturn * quantity
             result.mark.breakEvens = breakEvens
-            result.mark.maxGain = maxTotalGain
-            result.mark.maxLoss = maxLoss
+            result.mark.maxGain = maxTotalGain  * quantity
+            result.mark.maxLoss = maxLoss  * quantity
         }
     });
     
