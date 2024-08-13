@@ -78,6 +78,8 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
                         currentOption.ask = Number(value)
                     }
 
+                    
+
 
                 } else {
                     //All others: <div<span data-testid=${property}
@@ -98,6 +100,10 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
                     }
                 }
             })
+
+            if (isNaN(currentOption.bid) || isNaN(currentOption.ask)) {
+                console.log("Error parsing strike:", currentOption.strike, {currentOption})
+            }
 
             isCalls ? callOptions[currentOption.strike] = currentOption : putOptions[currentOption.strike] = currentOption
         })

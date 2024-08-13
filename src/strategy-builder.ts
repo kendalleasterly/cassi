@@ -11,18 +11,19 @@ class StrategyBuilder {
 
     constructor(
         public currentPrice: number,
-        public IV: number,
+        public volatility: number,
         public timeToExp: number,
         public putOptions: {[key: number]: OptionLeg},
         public callOptions: {[key: number]: OptionLeg},
         public maxCollateral: number
     ) {
-        this.stdDevPrice = currentPrice * IV * Math.sqrt(timeToExp)
+        this.stdDevPrice = currentPrice * volatility * Math.sqrt(timeToExp)
+
     }
 
     isInBounds(strikePrice: number): boolean {
-        const lowerBound = this.currentPrice - this.stdDevPrice * 6
-        const upperBound = this.currentPrice + this.stdDevPrice * 6
+        const lowerBound = this.currentPrice - this.stdDevPrice * 10
+        const upperBound = this.currentPrice + this.stdDevPrice * 10
 
         return strikePrice <= upperBound && strikePrice >= lowerBound
     }
@@ -40,14 +41,9 @@ class StrategyBuilder {
 
             optionLegs.forEach((shortLeg, _) => {
                 if (!this.isInBounds(shortLeg.strike)) return
-        
-                // then loop through all the potential LONG put options inside, only combining the LONG puts that are strictly lower than the SHORT put options
                 
                 optionLegs.forEach((longLeg, _) => {
         
-                    // if (!longLeg.isOTM) { //doesn't need to be OTM rn, but should be decently close
-                    //     return
-                    // }
                     if (!this.isInBounds(longLeg.strike)) return
         
                     if ((type == "put" && longLeg.strike >= shortLeg.strike) || (type == "call" && shortLeg.strike >= longLeg.strike)) return
@@ -60,17 +56,14 @@ class StrategyBuilder {
                     if (templateEvalResult.collateral > this.maxCollateral) {
                         return
                     }
+                    // console.log(allStratagies.length, "getting new total expected value...")
+                    const {totalMarkValue, totalNaturalValue} = this.getTotalExpectedValue(strategy, this.volatility)
     
-                    const {totalMarkValue, totalNaturalValue} = this.getTotalExpectedValue(strategy, this.IV)
-    
-                    templateEvalResult.markExpectedVal = totalMarkValue
-                    templateEvalResult.naturalExpectedVal = totalNaturalValue
+                    templateEvalResult.mark.expectedValue = totalMarkValue
+                    templateEvalResult.natural.expectedValue = totalNaturalValue
     
                     
                     allStratagies.push(templateEvalResult)  
-                    
-                    
-                        
                     
                 })
             })
@@ -90,7 +83,6 @@ class StrategyBuilder {
     
         putOptionArray.forEach((longPut, _) => {
 
-            console.log(longPut.strike)
             if (!this.isInBounds(longPut.strike)) return
     
             putOptionArray.forEach((shortPut, _) => {
@@ -98,8 +90,6 @@ class StrategyBuilder {
                 if (shortPut.strike <= longPut.strike) return
                 if ((shortPut.strike - longPut.strike) * 100 > this.maxCollateral) return
                 if (!this.isInBounds(shortPut.strike)) return
-
-                console.log(shortPut.strike)
     
                 callOptionArray.forEach((shortCall, _) => {
     
@@ -114,18 +104,11 @@ class StrategyBuilder {
     
                         const strategy: IronCondor = {longPut, shortPut, longCall, shortCall}
     
-                        const {totalMarkValue, totalNaturalValue} = this.getTotalExpectedValue(strategy, this.IV)
+                        const {totalMarkValue, totalNaturalValue} = this.getTotalExpectedValue(strategy, this.volatility)
         
                         let templateEvalResult = StrategyEvaluator.evaluateIronCondor(strategy, this.maxCollateral) // we do this to easily get the max collateral
-                        templateEvalResult.markExpectedVal = totalMarkValue
-                        templateEvalResult.naturalExpectedVal = totalNaturalValue
-        
-                        
-                        if (templateEvalResult.markBreakEvens[0] < this.currentPrice && this.currentPrice < templateEvalResult.markBreakEvens[1]) {
-                            allStratagies.push(templateEvalResult)  
-                        }
-
-                        
+                        templateEvalResult.mark.expectedValue = totalMarkValue
+                        templateEvalResult.natural.expectedValue = totalNaturalValue
                         
                     })
                 })
@@ -140,11 +123,11 @@ class StrategyBuilder {
         let topMarkStrategies = [...allStratagies]
     
         topNaturalStrategies.sort((a, b) => {
-            return b.naturalExpectedVal - a.naturalExpectedVal
+            return b.natural.expectedValue - a.natural.expectedValue
         })
     
         topMarkStrategies.sort((a, b) => {
-            return b.markExpectedVal - a.markExpectedVal
+            return b.mark.expectedValue - a.mark.expectedValue
         })
     
         topNaturalStrategies = topNaturalStrategies.slice(0, limit)
@@ -159,7 +142,6 @@ class StrategyBuilder {
     }
 
     /**
-     * uses the target price to find a Euler approximation for the new probabilties (by using each gamma at each strike until you reach the center mean)
      * 
      * @param {OptionLeg} option - The option to have its probabilties simulated when at the target price
      * @param {number} newPrice - The simulated price of the stock (provides context to know how far we need to go to target price)
@@ -176,7 +158,9 @@ class StrategyBuilder {
         return newProfile
     }
     
-    
+    normCDF(z: number): number {
+        return (1.0 + mathjs.erf(z / Math.sqrt(2))) / 2.0;
+    }
     
     /**
      * probabiltiy that future stock price will be between two stock price
@@ -187,10 +171,6 @@ class StrategyBuilder {
      */
     
     stockPriceCDF(meanPrice: number,  volatility: number, futurePrice1: number, futurePrice2: number, r: number): number {
-    
-        function normCDF(x: number): number {
-            return (1.0 + mathjs.erf(x / Math.sqrt(2))) / 2.0;
-        }
     
         const S0 = meanPrice
         const K_1 = futurePrice1
@@ -203,13 +183,11 @@ class StrategyBuilder {
         const d2_2 = (Math.log(K_2 / S0) - (r - 0.5 * Math.pow(sigma, 2)) * T) / (sigma * Math.sqrt(T));
         
         // Calculate the CDF value
-        const cdfValue_1 = normCDF(d2_1)
-        const cdfValue_2 = normCDF(d2_2)
+        const cdfValue_1 = this.normCDF(d2_1)
+        const cdfValue_2 = this.normCDF(d2_2)
     
         return Math.abs(cdfValue_1 - cdfValue_2);
     }
-    // could've just used delta to approximate probOTM  and ITM, but wouldn't be as accurate
-    // could've just used an estimation between two strikes, but that wouldn't be as accurate. Also, different strikes have slightly different prob distributions, so probabilties could have major discrepencies
     
     getTotalExpectedValue(strategy: IronCondor | CreditSpread, volatility: number ): {totalMarkValue: number, totalNaturalValue: number} { //
     
@@ -218,24 +196,25 @@ class StrategyBuilder {
         let lastResultValue = -99999999;
     
         [-1, 1].forEach(direction => {
+
+            const width = this.stdDevPrice / 100 
     
-            for (let i = 0; i < (100000); i++) {
-                const width = this.stdDevPrice / 100 
-                
+            for (let i = 0; i < (100000); i++) { 
     
                 let newPrice = this.currentPrice + (width * i) * direction
+                if (newPrice <= 0) break
                 
                 let adjustedProfile: {[key: string]: OptionLeg | string} = {...strategy}
         
                 Object.keys(strategy).forEach(key => {
-                    if (key == "type") return   // only key on either that isn't an option leg
+                    if (key == "type") return  
         
-                    const newLegProfile = this.simulateProfile(adjustedProfile[key] as OptionLeg, newPrice, volatility) //all this does is change the probabilities. make a new function that does the same thing using stockPriceCDF instead of the gamma simulation
+                    const newLegProfile = this.simulateProfile(adjustedProfile[key] as OptionLeg, newPrice, volatility) 
         
                     adjustedProfile[key] = newLegProfile
         
                 });
-    
+
                 let evalResult: EvalResult | null = null
     
                 if (Object.keys(adjustedProfile).includes("type")) { //it is a credit spread
@@ -243,29 +222,22 @@ class StrategyBuilder {
                 } else {
                     evalResult = StrategyEvaluator.evaluateIronCondor(adjustedProfile as IronCondor, this.maxCollateral)
                 }
-        
-                
                 
                 const probArea = this.stockPriceCDF(this.currentPrice, volatility, newPrice + direction * width, newPrice, RISK_FREE_RATE)
-                const expectedMarkValue = probArea * evalResult.markExpectedVal
-                const expectedNaturalValue = probArea * evalResult.naturalExpectedVal
-
-                // if (Math.floor(i / 10) == i / 10) console.log({newPrice, probArea, expectedMarkValue}, evalResult.markExpectedVal)
+                const expectedMarkValue = probArea * evalResult.mark.expectedValue
+                const expectedNaturalValue = probArea * evalResult.natural.expectedValue
 
                 totalMarkValue+=expectedMarkValue
                 totalNaturalValue += expectedNaturalValue
         
-                // console.log({newPrice, expectedValue, probArea}, evalResult.markExpectedVal)
-                if (lastResultValue == evalResult.markExpectedVal) {
-                    // console.log("- - -  expected reached max value - - - ")
+                if (lastResultValue == evalResult.mark.expectedValue) {
                     break
                 }
         
-                lastResultValue = evalResult.markExpectedVal
+                lastResultValue = evalResult.mark.expectedValue
                 
             }
         
-            // console.log({totalValue: totalMarkValue})
         })
     
         return {totalMarkValue, totalNaturalValue}
@@ -287,10 +259,6 @@ type IronCondor = {
     longCall: OptionLeg
     
 }
-
-// type ShortPut = Strategy & {
-//     shortPut: OptionLeg
-// }
 
 export {CreditSpread, IronCondor, StrategyBuilder}
 
