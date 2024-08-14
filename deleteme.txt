@@ -43,8 +43,8 @@
       isOTM: false,
       bid: 13.4,
       ask: 13.65,
-      probOTM: 1,
-      probITM: 0
+      probOTM: 0.9999999992650375,
+      probITM: 7.349625352759404e-10
     },
     longLeg: {
       type: 'put',
@@ -53,7 +53,7 @@
       bid: 4.2,
       ask: 4.3,
       probOTM: 1,
-      probITM: 0
+      probITM: 5.551115123125783e-17
     },
     type: 'put'
   },
@@ -87,8 +87,8 @@
       type: 'call',
       strike: 232.5,
       isOTM: true,
-      probITM: 1,
-      probOTM: 0,
+      probITM: 0.9999999999794023,
+      probOTM: 2.0597745731265604e-11,
       bid: 0.05,
       ask: 0.06
     },
@@ -340,8 +340,8 @@
       isOTM: false,
       bid: 13.4,
       ask: 13.65,
-      probOTM: 1,
-      probITM: 0
+      probOTM: 0.9999999992650375,
+      probITM: 7.349625352759404e-10
     },
     longLeg: {
       type: 'put',
@@ -350,7 +350,7 @@
       bid: 4.2,
       ask: 4.3,
       probOTM: 1,
-      probITM: 0
+      probITM: 5.551115123125783e-17
     },
     type: 'put'
   },
@@ -377,8 +377,8 @@
       isOTM: false,
       bid: 15.9,
       ask: 16.25,
-      probOTM: 1,
-      probITM: 0
+      probOTM: 0.9999999811594062,
+      probITM: 1.8840593751789925e-8
     },
     longLeg: {
       type: 'put',
@@ -386,8 +386,8 @@
       isOTM: false,
       bid: 6.2,
       ask: 6.35,
-      probOTM: 1,
-      probITM: 0
+      probOTM: 0.9999999999999942,
+      probITM: 5.717648576819556e-15
     },
     type: 'put'
   },
@@ -590,4 +590,3 @@
     maxGain: 780.0000000000001,
     maxLoss: -219.9999999999999
   }
-}

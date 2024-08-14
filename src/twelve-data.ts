@@ -65,7 +65,7 @@ class TwelveDataModel {
 
     }
 
-    async getVolatilityLogDistribution(): Promise<{mean: number, stdDev: number}> {
+    async getVolatilityLogDistribution(): Promise<{meanVolatility: number, logVolatilityStats: {mean: number, stdDev: number}}> {
 
         const avgPrices = await this.getAvgPrices()
         const stdDevs = await this.getStdDevs()
@@ -82,9 +82,9 @@ class TwelveDataModel {
 
                 const timeFactor = 12 // 12 five-minute periods in an hour
 
-                const volatility = stdDev * (1 / price) * Math.sqrt(6.5 * 252 * timeFactor) // 6.5 hours in a trading day, 252 trading days in a year
+                const annualVolatility = stdDev * (1 / price) * Math.sqrt(6.5 * 252 * timeFactor) // 6.5 hours in a trading day, 252 trading days in a year
 
-                volatilities.push(volatility)
+                volatilities.push(annualVolatility)
 
             })
 
@@ -96,7 +96,7 @@ class TwelveDataModel {
             logVolatilities.push(Math.log(volatilitiy)) 
         })
 
-        return this.getMeanAndStdDev(logVolatilities)
+        return {meanVolatility: mathjs.mean(volatilities), logVolatilityStats: this.getMeanAndStdDev(logVolatilities)}
 
     }
 

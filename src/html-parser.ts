@@ -57,7 +57,6 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
 
             const tdEl = $(rowEl).find("td").get()[0]
             const className = $(tdEl).attr("class")
-            currentOption.isOTM = !className?.includes("otm")
             
 
             $(rowEl).find("td").each((i, tdEl) => { //for each attribute in each option

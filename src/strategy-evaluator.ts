@@ -1,17 +1,17 @@
 import { OptionLeg } from "./html-parser";
 import { CreditSpread, IronCondor } from "./strategy-builder";
 
-function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): EvalResult {
+function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number, maxAcceptableLoss: number): EvalResult {
 
     const longLeg = strategy.longLeg
     const shortLeg = strategy.shortLeg
 
     const collateral = Math.abs(shortLeg.strike - longLeg.strike) * 100
-    const quantity = Math.floor( maxCollateral  / collateral)
+    
 
     let result: EvalResult = {
         strategy, 
-        quantity,
+        quantity: 0,
         collateral,
         mark: {
             expectedValue: 0,
@@ -28,7 +28,7 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
     };
 
 
-    ["markExpectedVal", "naturalExpectedVal"].forEach(pricingType => {
+    ["naturalExpectedVal", "markExpectedVal"].forEach(pricingType => {
         
         let maxGain = 0
 
@@ -44,6 +44,8 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
         const {expectedReturn: triangleExpectedReturn, breakEven} = getTriangleExpectedReturns(shortLeg,longLeg,maxGain,strategy.type)
         
         const maxLoss = -(collateral - maxGain)
+        const quantity = Math.min(Math.floor( maxAcceptableLoss  / maxLoss * -1), Math.floor(maxCollateral / collateral))
+        result.quantity = quantity
 
         const expectedGain = shortLeg.probOTM * maxGain
         const expectedLoss = longLeg.probITM * maxLoss
@@ -68,18 +70,17 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number): Ev
 
 }
 
-function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalResult {
+function evaluateIronCondor(strategy: IronCondor, maxCollateral: number, maxAcceptableLoss: number): EvalResult {
     const longPut = strategy.longPut
     const shortPut = strategy.shortPut
     const shortCall = strategy.shortCall
     const longCall = strategy.longCall
     
     const collateral = Math.max(shortPut.strike - longPut.strike, longCall.strike - shortCall.strike) * 100
-    const quantity = Math.floor( maxCollateral  / collateral)
 
     let result: EvalResult = {
         strategy, 
-        quantity,
+        quantity: 0,
         collateral,
         mark: {
             expectedValue: 0,
@@ -134,7 +135,10 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number): EvalRe
         const expectedReturn = (expectedPutLoss + putTriangleExpectedReturn + expectedMaxGain + callTriangleExpectedReturn + expectedCallLoss)  
 
         const maxLoss = -Math.max((longCall.strike - shortCall.strike) * 100 - maxTotalGain, (shortPut.strike - longPut.strike) * 100 - maxTotalGain)
+        const quantity = Math.min(Math.floor( maxAcceptableLoss  / maxLoss * -1), Math.floor(maxCollateral / collateral))
+        result.quantity = quantity
         const breakEvens = [Math.min(putBreakEven, callBreakEven), Math.max(putBreakEven, callBreakEven)]
+
 
         if (pricingType == "naturalExpectedVal") {
             result.natural.expectedValue = expectedReturn  * quantity
