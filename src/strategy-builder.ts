@@ -34,8 +34,8 @@ class StrategyBuilder {
         let expectedMarkVal = 0
         let expectedNaturalVal = 0
 
-        const width = this.stdDevLogVol * .25;
-        const steps = 12;
+        const width = this.stdDevLogVol * .2;
+        const steps = 20;
 
         [-1, 1].forEach(direction => {
 
