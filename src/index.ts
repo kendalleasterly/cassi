@@ -113,7 +113,6 @@ async function main( ticker: string, timeToExp: number, maxLoss: number, collate
 			allTopMarkResults.push(...topMarkResults)
 
 			workersReturned++
-			console.log("received message!")
 
 			if (workersReturned == numCores) {
 

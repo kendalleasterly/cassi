@@ -23,7 +23,6 @@ class StrategyBuilder {
         public maxCollateral: number
     ) {
         this.stdDevPrice = currentPrice * meanVolatility * Math.sqrt(timeToExp) // already converted to the time period
-        console.log("stdDevPrice: ", this.stdDevPrice)
 
     }
 
@@ -34,8 +33,8 @@ class StrategyBuilder {
         let expectedMarkVal = 0
         let expectedNaturalVal = 0
 
-        const width = this.stdDevLogVol * .2;
-        const steps = 20;
+        const width = this.stdDevLogVol * .25;
+        const steps = 13;
 
         [-1, 1].forEach(direction => {
 
@@ -249,10 +248,10 @@ class StrategyBuilder {
         [-1, 1].forEach(direction => {
 
             // This speeds up runs with higher volatilites, as these runs will evaluate more legs. So the larger the mean volatility, the larger the width (and the less accurate).
-            const widthFactor = this.meanVolatility / 20 // 20 is just some arbitrary value that I chose to scale the proportion by (.2 / 20 = 0.01 or 1 one-hundreth of a standard deviation)
+            const widthFactor = this.meanVolatility / 23 // 20 is just some arbitrary value that I chose to scale the proportion by (.2 / 20 = 0.01 or 1 one-hundreth of a standard deviation)
             const width = this.stdDevPrice * widthFactor // 
     
-            for (let i = 0; i < ((1 / widthFactor) * 10); i++) { // 10 stdDevs in both directions
+            for (let i = 0; i < ((1 / widthFactor) * 8); i++) { // 10 stdDevs in both directions
     
                 let newPrice = this.currentPrice + (width * i) * direction
                 if (newPrice <= 0) break
