@@ -1,43 +1,23 @@
 import { HTMLParser, OptionLeg } from "./html-parser"
-import { CreditSpread, getTopResults, IronCondor, StrategyBuilder } from "./strategy-builder"
+import { CreditSpread, IronCondor, StrategyBuilder } from "./strategy-builder"
 import { EvalResult, StrategyEvaluator } from "./strategy-evaluator"
 import { TwelveDataModel } from "./twelve-data"
 import { Worker, isMainThread, parentPort, workerData } from "worker_threads"
 import os from "os"
 const numCores = os.cpus().length
 
-const testStrategy: CreditSpread = {
-	shortLeg: {
-		type: "call",
-		strike: 222.5,
-		probITM: 1,
-		probOTM: 0,
-		bid: 1.62,
-		ask: 1.66,
-	},
-	longLeg: {
-		type: "call",
-		strike: 225,
-		probITM: 0.9999999999999999,
-		probOTM: 1.1102230246251565e-16,
-		bid: 0.74,
-		ask: 0.78,
-	},
-	type: "call",
-}
 
-function getTopStrategies(params: GetTopStrategiesParameters) {
+// We put the parameters for this function into an object because these are getting passed around as messages from Main thread to worker thread
+function getTopStrategies(p: GetTopStrategiesParameters) {
 	const { callOptions, putOptions } = HTMLParser.parseHTML(
-		`Trade ${params.ticker} _ thinkorswim Web`
+		`Trade ${p.ticker} _ thinkorswim Web`
 	)
 
-	const strategyBuilder = new StrategyBuilder( params.currentPrice, params.meanVolatility, params.meanLogVolatility, params.stdDevLogVolatility, params.timeToExp, putOptions, callOptions, params.maxLoss, params.maxCollateral)
-
-	console.log("finding best credit spreads...")
+	const strategyBuilder = new StrategyBuilder(p.currentPrice, p.meanVolatility, p.meanLogVolatility, p.stdDevLogVolatility, p.timeToExp, putOptions, callOptions, p.maxLoss, p.maxCollateral)
+	
 	const allCreditSpreads = strategyBuilder.findBestCreditSpread()
-	console.log("worker", params.workerIndex, "is finding best iron condor...")
 
-	//get the all of the put options that are in bounds
+	// 	get the all of the put options that are in bounds
 	// give the function the starting put options
 
 	const feasiblePutOptions: OptionLeg[] = []
@@ -48,8 +28,7 @@ function getTopStrategies(params: GetTopStrategiesParameters) {
 
 	})
 
-	const currentOptionLegs = getLegsForWorker(params.workerIndex, feasiblePutOptions)
-
+	const currentOptionLegs = getLegsForWorker(p.workerIndex, feasiblePutOptions)
 	const allIronCondors = strategyBuilder.findBestIronCondor(currentOptionLegs)
 
 	const { topMarkResults, topNaturalResults } = getTopResults( [...allCreditSpreads, ...allIronCondors], 8 )
@@ -60,57 +39,121 @@ function getTopStrategies(params: GetTopStrategiesParameters) {
 
 	// - - - MARK: Testing Zone - - -
 
-}
-
-function getLegsForWorker(workerIndex: number, allValues: OptionLeg[]) {
-	// Very inefficient, but doesn't matter as this will have like 50-75 values maximum (which happens once on each thread)
-
-	let legAssignments: {[key: number]: OptionLeg[]} = {}
-
-	for (let i = 0; i < numCores; i++) {
-		legAssignments[i] = []
-	}
-
-	let stack = allValues
-
-	while (stack.length > 0) {
+	function getLegsForWorker(workerIndex: number, allValues: OptionLeg[]): OptionLeg[] {
+		// Very inefficient, but doesn't matter as this will have like 50-75 values maximum (which happens once on each thread)
+	
+		let legAssignments: {[key: number]: OptionLeg[]} = {}
+	
 		for (let i = 0; i < numCores; i++) {
-
-			let currLeg = stack.pop()
-
-			if (currLeg == undefined) continue
-
-			legAssignments[i].push(currLeg)
-			
+			legAssignments[i] = []
 		}
+	
+		let stack = allValues
+	
+		while (stack.length > 0) {
+			for (let i = 0; i < numCores; i++) {
+	
+				let currLeg = stack.pop()
+	
+				if (currLeg == undefined) continue
+	
+				legAssignments[i].push(currLeg)
+				
+			}
+		}
+	
+		return legAssignments[workerIndex]
 	}
 
-	return legAssignments[workerIndex]
 }
 
-async function main( ticker: string, timeToExp: number, maxLoss: number, collateral: number) {
-	const twelveDataModel = new TwelveDataModel(ticker, "5min", 12 * 6.5 * 4)
+function getTopResults(allStratagies: EvalResult[], limit: number) {
+    let topNaturalResults = [...allStratagies]
+    let topMarkResults = [...allStratagies]
 
-	const { meanVolatility, logVolatilityStats } =
-		await twelveDataModel.getVolatilityLogDistribution()
-	console.log({ meanVolatility })
+    topNaturalResults.sort((a, b) => {
+        return b.natural.expectedValue - a.natural.expectedValue
+    })
+
+    topMarkResults.sort((a, b) => {
+        return b.mark.expectedValue - a.mark.expectedValue
+    })
+
+    topNaturalResults = topNaturalResults.slice(0, limit)
+    topMarkResults = topMarkResults.slice(0, limit)
+
+    return {topNaturalResults, topMarkResults}
+}
+
+
+
+async function main( ticker: string, timeToExp: number, maxLoss: number, maxCollateral: number, volatilityMultiplier: number) {
+	const twelveDataModel = new TwelveDataModel(ticker, "5min", 12 * 6.5 * 21)
+
+	const { meanVolatility: rawMeanVolatility, logVolatilityStats: rawLogVolatilityStats } = await twelveDataModel.getVolatilityLogDistribution()
+
+	let meanVolatility = rawMeanVolatility * volatilityMultiplier
+	let logVolatilityStats = {
+		mean: rawLogVolatilityStats.mean + Math.log(volatilityMultiplier),
+		stdDev: rawLogVolatilityStats.stdDev + Math.log(volatilityMultiplier)
+	}
+
 
 	const SMAs = await twelveDataModel.getAvgPrices("1h", 1)
 	const SMA = Object.values(SMAs)[0]
-	console.log({ SMA })
-	console.log({ logVolatilityStats })
+	
+	console.log({ SMA, volatilityFactor: volatilityMultiplier, meanVolatility, logVolatilityStats })
+
 
 	let workersReturned = 0
 
-	let allTopNaturalResults: EvalResult[] = []
-	let allTopMarkResults: EvalResult[] = []
+	let allTopNaturalResults: {[key: string]: EvalResult} = {}
+	let allTopMarkResults: {[key: string]: EvalResult} = {}
 
-	startWorkersWith( {ticker, maxLoss, maxCollateral: collateral, currentPrice: SMA, meanVolatility, meanLogVolatility: logVolatilityStats.mean, stdDevLogVolatility: logVolatilityStats.stdDev, timeToExp,  workerIndex: -1}, 
+	startWorkersWith( {ticker, maxLoss,maxCollateral, currentPrice: SMA, meanVolatility, meanLogVolatility: logVolatilityStats.mean, stdDevLogVolatility: logVolatilityStats.stdDev, timeToExp,  workerIndex: -1}, 
 		(message) => {
 			const {topMarkResults, topNaturalResults} = message.payload as {topMarkResults: EvalResult[], topNaturalResults: EvalResult[]}
 
-			allTopNaturalResults.push(...topNaturalResults)
-			allTopMarkResults.push(...topMarkResults)
+			topMarkResults.forEach(evalResult => {
+
+				let id = ""
+
+				if (Object.keys(evalResult.strategy).includes("type")) {  // it's a credit spread 
+
+					const creditSpread = evalResult.strategy as CreditSpread
+					id = `${creditSpread.shortLeg.strike}-${creditSpread.longLeg.strike}-${creditSpread.type}`
+				} else {
+
+					const ironCondor = evalResult.strategy as IronCondor
+
+					id = `${ironCondor.longPut.strike}-${ironCondor.shortPut.strike}-${ironCondor.shortCall.strike}-${ironCondor.longCall.strike}`
+				}
+
+
+				allTopMarkResults[id] = evalResult
+
+				
+			})
+
+			topNaturalResults.forEach(evalResult => {
+
+				let id = ""
+
+				if (Object.keys(evalResult.strategy).includes("type")) {  // it's a credit spread 
+
+					const creditSpread = evalResult.strategy as CreditSpread
+					id = `${creditSpread.shortLeg.strike}-${creditSpread.longLeg.strike}-${creditSpread.type}`
+				} else {
+
+					const ironCondor = evalResult.strategy as IronCondor
+					id = `${ironCondor.longPut.strike}-${ironCondor.shortPut.strike}-${ironCondor.shortCall.strike}-${ironCondor.longCall.strike}`
+				}
+
+
+				allTopNaturalResults[id] = evalResult
+
+			})
+			
 
 			workersReturned++
 
@@ -118,25 +161,18 @@ async function main( ticker: string, timeToExp: number, maxLoss: number, collate
 
 				console.log({workersReturned})
 
-				const limit = 8
+				const limit = 4
 
 				console.log("- - - NATURAL - - - ")
-				getTopResults([...allTopNaturalResults,...allTopMarkResults ], limit).topNaturalResults.forEach((result, _) => console.log(result))
+				getTopResults([...Object.values(allTopNaturalResults),...Object.values(allTopMarkResults) ], limit).topNaturalResults.forEach((result, _) => console.log(result))
 				console.log("- - - MARK - - - ")
-				getTopResults([...allTopNaturalResults,...allTopMarkResults ], limit).topMarkResults.forEach((result, _) => console.log(result))
+				getTopResults([...Object.values(allTopNaturalResults),...Object.values(allTopMarkResults) ], limit).topMarkResults.forEach((result, _) => console.log(result))
 			}
 			
 		}
 	)
-
-	// - - - MARK: Testing - - -
 	
 }
-
-
-
-// 53.65 seconds for 250
-// 100.85 seconds for 500
 
 
 
@@ -163,7 +199,7 @@ function startWorkersWith(getTopStratsParams: GetTopStrategiesParameters, callba
 
 if (isMainThread) {
 
-	main("ASTS", 1 / 252, 250, 1000)
+	main("NVDA", 2 / 252, 200, 4000, 1.75)
 
 } else if (parentPort) {
 	
@@ -179,32 +215,6 @@ if (isMainThread) {
 	})
 	
 }
-
-/// - - - MARK: Testing
-
-// let testArr = []
-
-// for (let i = 0; i < 55; i++) {
-// 	testArr.push(i)
-// }
-
-// const num = 10
-// const width = Math.ceil(testArr.length / num)
-
-
-// for (let i = 0; i < num; i++) {
-
-// 	if (i == num - 1) {
-// 		console.log(testArr.slice(i * width))
-// 	} else {
-// 		console.log(testArr.slice(i * width, (i + 1) * width))
-// 	}
-	
-// }
-
-
-
-
 
 
 type ThreadMessage = {
@@ -223,5 +233,3 @@ type GetTopStrategiesParameters = {
 	timeToExp: number, 
 	workerIndex: number
 }
-
-// - - - MARK: Testing - - -

@@ -53,6 +53,7 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
 
             const regex = /Strike (\d+.?\d),/
             const match = ariaLabel?.match(regex)![1]
+            // console.log({ariaLabel})
             currentOption.strike = Number(match)
 
             const tdEl = $(rowEl).find("td").get()[0]

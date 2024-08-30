@@ -124,6 +124,11 @@ class StrategyBuilder {
     
                     templateEvalResult.mark.expectedValue = totalMarkValue
                     templateEvalResult.natural.expectedValue = totalNaturalValue
+
+                    if (isNaN(totalMarkValue)) {
+                        console.error("Found NaN in find best credit spread", strategy)
+                    }
+
     
                     
                     allStratagies.push(templateEvalResult)  
@@ -175,6 +180,11 @@ class StrategyBuilder {
     
                         const {expectedMarkValue, expectedNaturalValue} = this.getVolatilityExpectedValue(strategy)
         
+                        if (isNaN(expectedNaturalValue)) {
+                            console.error("Found NaN in find best iron condor", strategy)
+                        }
+
+                        
                         
                         templateEvalResult.mark.expectedValue = expectedMarkValue
                         templateEvalResult.natural.expectedValue = expectedNaturalValue
@@ -312,25 +322,7 @@ type IronCondor = {
     
 }
 
-function getTopResults(allStratagies: EvalResult[], limit: number) {
-    let topNaturalResults = [...allStratagies]
-    let topMarkResults = [...allStratagies]
-
-    topNaturalResults.sort((a, b) => {
-        return b.natural.expectedValue - a.natural.expectedValue
-    })
-
-    topMarkResults.sort((a, b) => {
-        return b.mark.expectedValue - a.mark.expectedValue
-    })
-
-    topNaturalResults = topNaturalResults.slice(0, limit)
-    topMarkResults = topMarkResults.slice(0, limit)
-
-    return {topNaturalResults, topMarkResults}
-}
-
-export {CreditSpread, IronCondor, StrategyBuilder, getTopResults}
+export {CreditSpread, IronCondor, StrategyBuilder}
 
 
 

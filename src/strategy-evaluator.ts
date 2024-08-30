@@ -16,13 +16,13 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number, max
         mark: {
             expectedValue: 0,
             breakEvens: [],
-            maxGain: 0,
+            price: 0,
             maxLoss: 0
         },
         natural: {
             expectedValue: 0,
             breakEvens: [],
-            maxGain: 0,
+            price: 0,
             maxLoss: 0
         }
     };
@@ -50,19 +50,24 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number, max
         const expectedGain = shortLeg.probOTM * maxGain
         const expectedLoss = longLeg.probITM * maxLoss
         
+        
         const expectedValue =  (expectedGain + triangleExpectedReturn + expectedLoss )
+
+        if (isNaN(expectedValue)) {
+            console.log("- - - NAN! - - -", {strategy})
+        }
 
         if (pricingType == "naturalExpectedVal") {
             result.natural.expectedValue = expectedValue * quantity
             result.natural.breakEvens = [breakEven]
             result.natural.maxLoss = maxLoss  * quantity
-            result.natural.maxGain = maxGain  * quantity
+            result.natural.price = maxGain 
 
         } else {
             result.mark.expectedValue = expectedValue  * quantity
             result.mark.breakEvens = [breakEven]
             result.mark.maxLoss = maxLoss * quantity
-            result.mark.maxGain = maxGain * quantity
+            result.mark.price = maxGain
         }
     });
     
@@ -85,13 +90,13 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number, maxAcce
         mark: {
             expectedValue: 0,
             breakEvens: [],
-            maxGain: 0,
+            price: 0,
             maxLoss: 0
         },
         natural: {
             expectedValue: 0,
             breakEvens: [],
-            maxGain: 0,
+            price: 0,
             maxLoss: 0
         }
     }
@@ -139,17 +144,25 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number, maxAcce
         result.quantity = quantity
         const breakEvens = [Math.min(putBreakEven, callBreakEven), Math.max(putBreakEven, callBreakEven)]
 
+        if (isNaN(expectedReturn)) {
+            console.error("Expected return was NAN", {strategy})
+        }
+
+        if (isNaN(quantity)) {
+            console.error("quantity was NAN", {strategy})
+        }
+
 
         if (pricingType == "naturalExpectedVal") {
             result.natural.expectedValue = expectedReturn  * quantity
             result.natural.breakEvens = breakEvens
-            result.natural.maxGain = maxTotalGain  * quantity
+            result.natural.price = maxTotalGain 
             result.natural.maxLoss = maxLoss  * quantity
             // #todo add in the max value here
         } else {
             result.mark.expectedValue = expectedReturn * quantity
             result.mark.breakEvens = breakEvens
-            result.mark.maxGain = maxTotalGain  * quantity
+            result.mark.price = maxTotalGain
             result.mark.maxLoss = maxLoss  * quantity
         }
     });
@@ -196,7 +209,7 @@ type EvalResult = {
 }
 
 type SubEvalResult = {
-    maxGain: number,
+    price: number,
     expectedValue: number
     maxLoss: number,
     breakEvens: number[]
