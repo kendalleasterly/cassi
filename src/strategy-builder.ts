@@ -1,7 +1,8 @@
 import { last } from "cheerio/lib/api/traversing";
-import { OptionChain, OptionLeg } from "./html-parser"
+import { HTMLParser, OptionChain, OptionLeg } from "./html-parser"
 import { EvalResult, StrategyEvaluator } from "./strategy-evaluator"
 import * as mathjs from 'mathjs';
+import { Workers } from "./workers";
 
 const RISK_FREE_RATE = 5.5 / 100
 
@@ -322,7 +323,69 @@ type IronCondor = {
     
 }
 
-export {CreditSpread, IronCondor, StrategyBuilder}
+function getTopResults(allStratagies: EvalResult[], limit: number) {
+    let topNaturalResults = [...allStratagies]
+    let topMarkResults = [...allStratagies]
+
+    topNaturalResults.sort((a, b) => {
+        return b.natural.expectedValue - a.natural.expectedValue
+    })
+
+    topMarkResults.sort((a, b) => {
+        return b.mark.expectedValue - a.mark.expectedValue
+    })
+
+    topNaturalResults = topNaturalResults.slice(0, limit)
+    topMarkResults = topMarkResults.slice(0, limit)
+
+    return {topNaturalResults, topMarkResults}
+}
+
+// We put the parameters for this function into an object because these are getting passed around as messages from Main thread to worker thread
+function buildTopStrategies(p: GetTopStrategiesParameters) {
+	const { callOptions, putOptions } = HTMLParser.parseHTML(
+		`Trade ${p.ticker} _ thinkorswim Web`
+	)
+
+	const strategyBuilder = new StrategyBuilder(p.currentPrice, p.meanVolatility, p.meanLogVolatility, p.stdDevLogVolatility, p.timeToExp, putOptions, callOptions, p.maxLoss, p.maxCollateral)
+	
+	const allCreditSpreads = strategyBuilder.findBestCreditSpread()
+
+	// 	get the all of the put options that are in bounds
+	// give the function the starting put options
+
+	const feasiblePutOptions: OptionLeg[] = []
+
+	Object.values({...putOptions}).forEach(optionLeg => {
+
+		if (strategyBuilder.isInBounds(optionLeg.strike)) feasiblePutOptions.push(optionLeg) 
+
+	})
+
+	const currentOptionLegs = Workers.getLegsForWorker(p.workerIndex, feasiblePutOptions)
+	const allIronCondors = strategyBuilder.findBestIronCondor(currentOptionLegs)
+
+	const { topMarkResults, topNaturalResults } = getTopResults( [...allCreditSpreads, ...allIronCondors], 8 )
+
+	console.log( strategyBuilder.strategiesEvaluatedVol, strategyBuilder.strategiesEvaluatedStockPrice )
+
+	return {topMarkResults, topNaturalResults}
+
+}
+
+type GetTopStrategiesParameters = {
+	ticker: string, 
+	maxLoss: number,
+	maxCollateral: number, 
+	currentPrice: number, 
+	meanVolatility: number, 
+	meanLogVolatility: number, 
+	stdDevLogVolatility: number, 
+	timeToExp: number, 
+	workerIndex: number
+}
+
+export {CreditSpread, IronCondor, StrategyBuilder, GetTopStrategiesParameters, getTopResults, buildTopStrategies}
 
 
 
