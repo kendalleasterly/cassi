@@ -16,7 +16,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@alpacahq/alpaca-trade-api": "^3.1.1",
+    "@notionhq/client": "^2.2.15",
     "axios": "^1.7.3",
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.4.5",

@@ -61,7 +61,7 @@ function workersGetTopResults(getTopStrategiesPrams: GetTopStrategiesParameters,
 				return topResultsDictionary
 			}
 
-
+			// We format it to a dictionary and then back to an array to get rid of duplicates
 			const formattedTopMark = formatTopResults(topMarkResults)
 			const formattedTopNatural = formatTopResults(topNaturalResults)
 
