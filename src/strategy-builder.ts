@@ -3,6 +3,7 @@ import { HTMLParser, OptionChain, OptionLeg } from "./html-parser"
 import { EvalResult, StrategyEvaluator } from "./strategy-evaluator"
 import * as mathjs from 'mathjs';
 import { Workers } from "./workers";
+import { systemSettings } from "./notion";
 
 const RISK_FREE_RATE = 5.5 / 100
 
@@ -24,6 +25,7 @@ class StrategyBuilder {
         public maxCollateral: number
     ) {
         this.stdDevPrice = currentPrice * meanVolatility * Math.sqrt(timeToExp) // already converted to the time period
+        console.log({stdDevPrice: this.stdDevPrice, timeToExp, meanVolatility, currentPrice})
 
     }
 
@@ -84,9 +86,19 @@ class StrategyBuilder {
     }
 
 
-    isInBounds(strikePrice: number): boolean {
+    isInBounds(strikePrice: number, isCall: boolean): boolean {
+        const padding = (this.stdDevPrice / 2)
         const lowerBound = this.currentPrice - this.stdDevPrice * 5
         const upperBound = this.currentPrice + this.stdDevPrice * 5
+
+        // if (!systemSettings.include_ITM) {
+        //     if (isCall) {
+        //         return (strikePrice + padding) >= this.currentPrice // adds a little wiggle room, shouldn't be a huge issue unless it's a stock of like $10 or less
+        //     }  else {
+        //         return (strikePrice - padding) <= this.currentPrice // adds a little wiggle room, shouldn't be a huge issue unless it's a stock of like $10 or less
+        //     }
+            
+        // }
 
         return strikePrice <= upperBound && strikePrice >= lowerBound
     }
@@ -101,15 +113,16 @@ class StrategyBuilder {
 
             const optionLegs = Object.values(optionLegsDict)
             const type = optionLegs[0].type
+            
 
             optionLegs.forEach((shortLeg, _) => {
                 
-                if (!this.isInBounds(shortLeg.strike)) return
+                if (!this.isInBounds(shortLeg.strike, type == "call" )) return
                 
                 
                 optionLegs.forEach((longLeg, _) => {
         
-                    if (!this.isInBounds(longLeg.strike)) return
+                    if (!this.isInBounds(longLeg.strike, type == "call")) return
         
                     if ((type == "put" && longLeg.strike >= shortLeg.strike) || (type == "call" && shortLeg.strike >= longLeg.strike)) return
     
@@ -145,6 +158,8 @@ class StrategyBuilder {
     findBestIronCondor(startingLongPuts: OptionLeg[]): EvalResult[] {
         // try not to restrict or filter the options it gives you, because if it is resellient and thinks its timed right, it should be logical enough
     
+        
+
         const putOptionArray = Object.values(this.putOptions)
         const callOptionArray = Object.values(this.callOptions)
     
@@ -152,24 +167,24 @@ class StrategyBuilder {
     
         startingLongPuts.forEach((longPut, _) => {
             
-            if (!this.isInBounds(longPut.strike)) return
+            if (!this.isInBounds(longPut.strike, false)) return
             
             putOptionArray.forEach((shortPut, _) => {
     
                 if (shortPut.strike <= longPut.strike) return
                 if ((shortPut.strike - longPut.strike) * 100 > this.maxCollateral) return
-                if (!this.isInBounds(shortPut.strike)) return
+                if (!this.isInBounds(shortPut.strike, false)) return
                 
                 callOptionArray.forEach((shortCall, _) => {
     
                     if (shortCall.strike <= shortPut.strike) return
-                    if (!this.isInBounds(shortCall.strike)) return
+                    if (!this.isInBounds(shortCall.strike, true)) return
 
                     
                     callOptionArray.forEach((longCall, _) => {
                         
                         if (longCall.strike <= shortCall.strike) return
-                        if (!this.isInBounds(longCall.strike)) return
+                        if (!this.isInBounds(longCall.strike, true)) return
                         
     
                         const strategy: IronCondor = {longPut, shortPut, longCall, shortCall}
@@ -285,8 +300,13 @@ class StrategyBuilder {
                 } else {
                     evalResult = StrategyEvaluator.evaluateIronCondor(adjustedProfile as IronCondor, this.maxCollateral, this.maxLoss)
                 }
+
+                const nextPrice = newPrice + direction * width
+
+                if (nextPrice < 0 || newPrice < 0) break
                 
-                const probArea = this.stockPriceCDF(this.currentPrice, volatility, newPrice + direction * width, newPrice, RISK_FREE_RATE)
+                const probArea = this.stockPriceCDF(this.currentPrice, volatility, nextPrice, newPrice, RISK_FREE_RATE)
+                
                 const expectedMarkValue = probArea * evalResult.mark.expectedValue
                 const expectedNaturalValue = probArea * evalResult.natural.expectedValue
 
@@ -358,7 +378,7 @@ function buildTopStrategies(p: GetTopStrategiesParameters) {
 
 	Object.values({...putOptions}).forEach(optionLeg => {
 
-		if (strategyBuilder.isInBounds(optionLeg.strike)) feasiblePutOptions.push(optionLeg) 
+		if (strategyBuilder.isInBounds(optionLeg.strike, false)) feasiblePutOptions.push(optionLeg) 
 
 	})
 

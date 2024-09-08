@@ -11,19 +11,20 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number, max
 
     let result: EvalResult = {
         strategy, 
-        quantity: 0,
         collateral,
         mark: {
             expectedValue: 0,
             breakEvens: [],
             price: 0,
-            maxLoss: 0
+            maxLoss: 0,
+            quantity: 0
         },
         natural: {
             expectedValue: 0,
             breakEvens: [],
             price: 0,
-            maxLoss: 0
+            maxLoss: 0,
+            quantity: 0
         }
     };
 
@@ -45,7 +46,7 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number, max
         
         const maxLoss = -(collateral - maxGain)
         const quantity = Math.min(Math.floor( maxAcceptableLoss  / maxLoss * -1), Math.floor(maxCollateral / collateral))
-        result.quantity = quantity
+        result.collateral = collateral
 
         const expectedGain = shortLeg.probOTM * maxGain
         const expectedLoss = longLeg.probITM * maxLoss
@@ -58,16 +59,18 @@ function evaluateCreditSpread(strategy: CreditSpread, maxCollateral: number, max
         }
 
         if (pricingType == "naturalExpectedVal") {
+            result.natural.quantity = quantity
             result.natural.expectedValue = expectedValue * quantity
             result.natural.breakEvens = [breakEven]
             result.natural.maxLoss = maxLoss  * quantity
-            result.natural.price = maxGain 
+            result.natural.price = maxGain / 100
 
         } else {
+            result.mark.quantity = quantity
             result.mark.expectedValue = expectedValue  * quantity
             result.mark.breakEvens = [breakEven]
             result.mark.maxLoss = maxLoss * quantity
-            result.mark.price = maxGain
+            result.mark.price = maxGain / 100
         }
     });
     
@@ -85,19 +88,20 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number, maxAcce
 
     let result: EvalResult = {
         strategy, 
-        quantity: 0,
         collateral,
         mark: {
             expectedValue: 0,
             breakEvens: [],
             price: 0,
-            maxLoss: 0
+            maxLoss: 0,
+            quantity: 0
         },
         natural: {
             expectedValue: 0,
             breakEvens: [],
             price: 0,
-            maxLoss: 0
+            maxLoss: 0,
+            quantity: 0
         }
     }
 
@@ -141,7 +145,8 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number, maxAcce
 
         const maxLoss = -Math.max((longCall.strike - shortCall.strike) * 100 - maxTotalGain, (shortPut.strike - longPut.strike) * 100 - maxTotalGain)
         const quantity = Math.min(Math.floor( maxAcceptableLoss  / maxLoss * -1), Math.floor(maxCollateral / collateral))
-        result.quantity = quantity
+        
+        result.collateral = collateral
         const breakEvens = [Math.min(putBreakEven, callBreakEven), Math.max(putBreakEven, callBreakEven)]
 
         if (isNaN(expectedReturn)) {
@@ -154,15 +159,16 @@ function evaluateIronCondor(strategy: IronCondor, maxCollateral: number, maxAcce
 
 
         if (pricingType == "naturalExpectedVal") {
+            result.natural.quantity = quantity
             result.natural.expectedValue = expectedReturn  * quantity
             result.natural.breakEvens = breakEvens
-            result.natural.price = maxTotalGain 
-            result.natural.maxLoss = maxLoss  * quantity
+            result.natural.price = maxTotalGain / 100
             // #todo add in the max value here
         } else {
+            result.mark.quantity = quantity
             result.mark.expectedValue = expectedReturn * quantity
             result.mark.breakEvens = breakEvens
-            result.mark.price = maxTotalGain
+            result.mark.price = maxTotalGain / 100
             result.mark.maxLoss = maxLoss  * quantity
         }
     });
@@ -204,7 +210,6 @@ type EvalResult = {
     strategy: CreditSpread | IronCondor
     natural: SubEvalResult
     mark: SubEvalResult
-    quantity: number,
     collateral:number,
 }
 
@@ -213,6 +218,7 @@ type SubEvalResult = {
     expectedValue: number
     maxLoss: number,
     breakEvens: number[]
+    quantity: number
 }
 
 const StrategyEvaluator = {evaluateCreditSpread, evaluateIronCondor}

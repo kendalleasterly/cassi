@@ -1,5 +1,5 @@
 import {Client} from "@notionhq/client"
-import { PartialDatabaseObjectResponse } from "@notionhq/client/build/src/api-endpoints"
+import { PageObjectResponse, PartialDatabaseObjectResponse } from "@notionhq/client/build/src/api-endpoints"
 import "dotenv/config"
 import { EvalResult } from "./strategy-evaluator"
 import { OptionLeg } from "./html-parser"
@@ -10,24 +10,36 @@ const notion = new Client({auth: notionSecret})
 
 const DATABASE_ID = "f058ca69-f082-47d6-9538-59a9afa37f04"
 
+const STRATEGY_TYPES_IDS = {
+    "Iron Condor": "<;oO",
+    "Call Credit Spread": "hRZ\\",
+    "Put Credit Spread": "Cmel"
+}
+
 class NotionModel {
     constructor(
         public ticker: string,
-        public expDate: Date
+        public expDate: Date,
+        public batchTime: string,
+        public SMA: number,
+        public meanVolatility: number
     ) {}
 
 
     async pushResult(result: EvalResult) {
 
-        const {strategyID, formattedStrikes, strategyTypeID} = this.getStrategyInfo(result.strategy)
+        const {strategyID, formattedStrikes, strategyTypeID, strategyTitle} = this.getStrategyInfo(result.strategy)
 
-        const response = await notion.pages.create({
+        await notion.pages.create({
             parent: {
                 database_id: DATABASE_ID,
             },
             properties: {
+                Title: {
+                    title: richText(strategyTitle)
+                },
                 ID: {
-                    title: richText(strategyID),
+                    rich_text: richText(strategyID),
                 },
                 ...formattedStrikes,
                 "Strategy Type": {
@@ -40,18 +52,35 @@ class NotionModel {
                         start: this.expDate.toISOString(),
                     },
                 },
+               "Batch Time": {
+                    rich_text: richText(this.batchTime)
+                },
+                "SMA": {
+                    number: this.SMA
+                },
+                "Volatility": {
+                    number: this.meanVolatility
+                },
                 ...this.getPropertiesFrom(result)
             }
         })
-
-        console.log(response)
     }
 
     getPropertiesFrom(result: EvalResult) {
+
+        let breakevens: {[key: string]: {number: number}} = {}
+
+        if (Object.keys(result.strategy).includes("type")) { // credit spread
+            const creditSpread = result.strategy as CreditSpread
+
+            breakevens[`${creditSpread.type == "call" ? "Call" : "Put"} Breakeven`] = {number: result.natural.breakEvens[0]}
+           
+        } else { // iron condor
+            breakevens["Put Breakeven"] = {number: Math.min(...result.natural.breakEvens)}
+            breakevens["Call Breakeven"] = {number: Math.max(...result.natural.breakEvens)}
+        }
+
         return {
-            Quantity: {
-                number: result.quantity
-            },
             Collateral: {
                 number: result.collateral
             },
@@ -72,7 +101,8 @@ class NotionModel {
             },
             "Natural Max Loss": {
                 number: result.natural.maxLoss
-            }
+            },
+            ...breakevens
         }
     }
     
@@ -95,10 +125,12 @@ class NotionModel {
         }
     }
 
-    getStrategyInfo(strategy: IronCondor | CreditSpread): {strategyID: string, formattedStrikes: {[key: string]: {number: number}}, strategyTypeID: string} {
+    getStrategyInfo(strategy: IronCondor | CreditSpread): {strategyID: string, formattedStrikes: {[key: string]: {number: number}}, strategyTypeID: string, strategyTitle: string} {
+
         let strategyID = ""
         let strikes: {[key: string]: number} = {}
         let strategyTypeID = ""
+        let strategyTitle = ""
 
         if (Object.keys(strategy).includes("type"))  { //it's a credit spread
             const creditSpread = strategy as CreditSpread
@@ -109,7 +141,9 @@ class NotionModel {
                 strikes["Long Put Strike"] = creditSpread.longLeg.strike
                 strikes["Short Put Strike"] = creditSpread.shortLeg.strike
 
-                strategyTypeID = "Cmel" // Put Credit Spread Type ID in Notion
+                strategyTypeID =  STRATEGY_TYPES_IDS["Put Credit Spread"]
+
+                strategyTitle = `${this.ticker} $${creditSpread.longLeg.strike} / $${creditSpread.shortLeg.strike} Puts`
 
             } else {
                 strategyID = this.getLegID(creditSpread.shortLeg) + "," + this.getLegID(creditSpread.longLeg)
@@ -117,7 +151,9 @@ class NotionModel {
                 strikes["Short Call Strike"] = creditSpread.shortLeg.strike
                 strikes["Long Call Strike"] = creditSpread.longLeg.strike
 
-                strategyTypeID = "hRZ\\" // Call Credit Spread Type ID in Notion
+                strategyTypeID = STRATEGY_TYPES_IDS["Call Credit Spread"] 
+
+                strategyTitle = `${this.ticker} $${creditSpread.shortLeg.strike} / $${creditSpread.longLeg.strike} Calls`
             }
         } else {
             const ironCondor = strategy as IronCondor
@@ -128,7 +164,9 @@ class NotionModel {
             strikes["Short Call Strike"] = ironCondor.shortCall.strike
             strikes["Long Call Strike"] = ironCondor.longCall.strike
 
-            strategyTypeID = "<;oO" // Iron Condor Type ID in Notion
+            strategyTypeID = STRATEGY_TYPES_IDS["Iron Condor"] 
+
+            strategyTitle = `${this.ticker} ${ironCondor.shortPut.strike} - ${ironCondor.shortCall.strike}`
         }
 
         let formattedStrikes: {[key: string]: {number: number}} = {}
@@ -137,16 +175,21 @@ class NotionModel {
             formattedStrikes[key] = {number: strikes[key]}
         })
 
-        return {strategyID, formattedStrikes, strategyTypeID}
+        
+
+        return {strategyID, formattedStrikes, strategyTypeID, strategyTitle}
     }
 
     async updateResult(result: EvalResult, pageID: string) {
         const response = await notion.pages.update({
             page_id: pageID,
-            properties: this.getPropertiesFrom(result)
+            properties: {
+                ...this.getPropertiesFrom(result),
+                "Batch Time": {
+                    rich_text: richText(this.batchTime)
+                }
+            }
         })
-
-        console.log(response)
     }
 
     async findExistingStrategy(id: string): Promise<string | undefined> {
@@ -177,8 +220,107 @@ class NotionModel {
         } else {
             await this.pushResult(result)
         }
+    }
 
+    async getOpenPositions(): Promise<({strategy: IronCondor | CreditSpread, pageID: string, currentQuantity: number})[]> {
+        // filter for strategies that have execution price
 
+        const response = await notion.databases.query({
+            database_id: DATABASE_ID,
+            filter: {
+                and: [
+                    {
+                        property: "Execution Price",
+                        number: {
+                            is_not_empty: true
+                        }
+                    },
+                    {
+                        property: "ID",
+                        rich_text: {
+                            contains: this.ticker
+                        }
+                    },
+                    {
+                        property: "Close Price",
+                        number: {
+                            is_empty: true
+                        }
+                    }
+                ]
+            }
+        })
+
+        let results:({strategy: IronCondor | CreditSpread, pageID: string, currentQuantity: number})[] = []
+
+        response.results.forEach((result) => {
+
+            // iron condor or credit spread?
+            const properties = (result as any).properties
+
+            const creditRecieved = properties["Execution Price"].number as number
+            const currentQuantity = properties["Execution Quantity"].number as number
+            const type = properties["Strategy Type"]["select"]["name"] as string
+
+            // reconstruct it into the strategy
+
+            if (type.includes("Credit Spread")) {
+
+                const isCall = type.includes("Call")
+                const longStrike = properties[`Long ${isCall ? "Call" : "Put"} Strike`].number as number
+                const shortStrike = properties[`Short ${isCall ? "Call" : "Put"} Strike`].number as number
+
+                const creditSpread: CreditSpread = {
+                    shortLeg: {
+                        strike: shortStrike, type: "call", bid: creditRecieved, ask: creditRecieved, probITM: 0, probOTM: 0
+                    }, 
+                    longLeg: {
+                        strike: longStrike, type: "call", bid: 0, ask: 0, probITM: 0, probOTM: 0
+                    },
+                    type: isCall ? "call" : "put"
+                }
+
+                results.push({strategy: creditSpread, pageID: result.id, currentQuantity})
+
+            } else if (type == "Iron Condor") {
+
+                const longPutStrike = properties[`Long Put Strike`].number as number
+                const shortPutStrike = properties[`Short Put Strike`].number as number
+                const shortCallStrike = properties[`Short Call Strike`].number as number
+                const longCallStrike = properties[`Long Call Strike`].number as number
+                
+
+                const ironCondor: IronCondor = {
+                    longPut: {
+                        strike: longPutStrike, bid: 0, ask: 0, probITM: 0, probOTM: 0, type: "put"
+                    },
+                    shortPut: {
+                        strike: shortPutStrike, bid: creditRecieved / 2, ask: creditRecieved / 2, probITM: 0, probOTM: 0, type: "put"
+                    },
+                    shortCall: {
+                        strike: shortCallStrike, bid: creditRecieved / 2, ask: creditRecieved / 2, probITM: 0, probOTM: 0, type: "call"
+                    },
+                    longCall: {
+                        strike: longCallStrike, bid: 0, ask: 0, probITM: 0, probOTM: 0, type: "call"
+                    },
+                }
+
+                results.push({strategy: ironCondor, pageID: result.id, currentQuantity})
+            }
+        })
+
+        return results
+    }
+
+    async updateCurrentExpectedValue(pageID: string, currentEx: number) {
+        await notion.pages.update({
+            page_id: pageID,
+            properties: {
+                "Current E(X)": {
+                    number: currentEx
+                }
+            }
+        })
     }
 
     // - - - MARK: Test Zone - - - 
@@ -210,22 +352,11 @@ function richText(text: string) {
 }
 
 
-export { NotionModel }
+let systemSettings: {
+	sortingMethod: "Top_Mark_of_Top_Natural" | "Top_Breakevens" | "Top_Natural"
+} = {
+	sortingMethod: "Top_Mark_of_Top_Natural",
+}
 
 
-
-
-
-
-// - - - MARK: Old Functions - - - 
-// async testFunction() {
-//     const response = await notion.search({
-//         query: "Strategies",
-//         filter: {
-//             value: "database",
-//             property: "object"
-//         }
-//     })
-
-//     console.log(response)
-// }
+export { NotionModel, systemSettings }

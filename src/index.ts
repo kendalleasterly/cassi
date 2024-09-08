@@ -1,14 +1,18 @@
-import { NotionModel } from "./notion"
-import { IronCondor, StrategyBuilder } from "./strategy-builder"
-import { EvalResult } from "./strategy-evaluator"
+import { NotionModel, systemSettings } from "./notion"
+import { CreditSpread, IronCondor, StrategyBuilder } from "./strategy-builder"
+import { EvalResult, StrategyEvaluator } from "./strategy-evaluator"
 import { TwelveDataModel } from "./twelve-data"
 import { Workers } from "./workers"
 
 
-async function main( ticker: string, timeToExp: number, maxLoss: number, maxCollateral: number, volatilityMultiplier: number) {
-	const twelveDataModel = new TwelveDataModel(ticker, "5min", 12 * 6.5 * 12)
 
-	const { meanVolatility: rawMeanVolatility, logVolatilityStats: rawLogVolatilityStats } = await twelveDataModel.getVolatilityLogDistribution()
+async function main( ticker: string, expDate: Date, maxLoss: number, maxCollateral: number, volatilityMultiplier: number) {
+
+	const timeToExp = ((expDate.getTime() - (new Date()).getTime()) / (1000 * 60 * 60 * 24)) / 252
+		
+	const twelveDataModel = new TwelveDataModel(ticker, "5min", Math.round(12 * 6.5 * .25))
+
+	let { meanVolatility: rawMeanVolatility, logVolatilityStats: rawLogVolatilityStats, SMA } = await twelveDataModel.getVolatilityLogDistribution()
 
 	let meanVolatility = rawMeanVolatility * volatilityMultiplier
 	let logVolatilityStats = {
@@ -16,91 +20,107 @@ async function main( ticker: string, timeToExp: number, maxLoss: number, maxColl
 		stdDev: rawLogVolatilityStats.stdDev + Math.log(volatilityMultiplier)
 	}
 
+	// SMA = 26.8
+	console.log({ SMA, timeToExp, volatilityMultiplier, meanVolatility, logVolatilityStats })
 
-	const SMAs = await twelveDataModel.getAvgPrices("1h", 1)
-	const SMA = Object.values(SMAs)[0]
 	
-	console.log({ SMA, volatilityFactor: volatilityMultiplier, meanVolatility, logVolatilityStats })
 
-	const params = {ticker, maxLoss,maxCollateral, currentPrice: SMA, meanVolatility, meanLogVolatility: logVolatilityStats.mean, stdDevLogVolatility: logVolatilityStats.stdDev, timeToExp,  workerIndex: -1}
+	// const batchTime = String(new Date().getTime())
+	// const notionModel = new NotionModel(ticker, expDate, batchTime, SMA, meanVolatility)
 	
-	const {topMarkResults, topNaturalResults} = await Workers.workersGetTopResults(params, 15)
 
-	const topNaturalByMark = [...topNaturalResults].sort((a, b) => {
-		return b.mark.expectedValue - a.mark.expectedValue
-	})
+	// const params = {ticker, maxLoss,maxCollateral, currentPrice: SMA, meanVolatility, meanLogVolatility: logVolatilityStats.mean, stdDevLogVolatility: logVolatilityStats.stdDev, timeToExp,  workerIndex: -1}
+	// const {topNaturalResults} = await Workers.workersGetTopResults(params, 25)
 
-	const outputLimit = 5
-	const topResults = topNaturalByMark.slice(0, outputLimit)
+	// let topResults: EvalResult[] = []
 
-	topResults.forEach((result, _) => console.log(result))
+	// if (systemSettings.sortingMethod == "Top_Mark_of_Top_Natural") {
 
+	// 	topResults = [...topNaturalResults].sort((a, b) => {
+	// 		return b.mark.expectedValue - a.mark.expectedValue
+	// 	})
+	// } else if (systemSettings.sortingMethod == "Top_Natural") {
+
+	// 	topResults = [...topNaturalResults].sort((a, b) => {
+	// 		return b.natural.expectedValue - a.natural.expectedValue
+	// 	})
+	// } else if (systemSettings.sortingMethod == "Top_Breakevens") {
+
+	// 	topResults = [...topNaturalResults].sort((a, b) => {
+	// 		return b.natural.breakEvens[0] - a.natural.breakEvens[0]
+	// 	})
+	// }
+	
+	// const outputLimit = 5
+	// topResults = topResults.slice(0, outputLimit)
+
+	// topResults.forEach((result, _) => console.log(result))
+
+	// topResults.forEach(result => {
+	// 	notionModel.updateOrPushResult(result)
+	// })
+
+	evaluateCurrentPositions(ticker, expDate, SMA, meanVolatility, logVolatilityStats.mean, logVolatilityStats.stdDev, timeToExp, maxLoss, maxCollateral)
 
 }
 
-// main("NVDA", 0.70923077 / 252, 100, 4000, 1)
-// main("ASTS", 0.46153846 / 252, 100, 4000, 1)
+
+
+const ticker = "ASTS"
+const expDate = new Date("9/6/2024, 16:00:00")
+main(ticker, expDate, 200, 3000, .5)
+
 
 // - - - MARK: Testing Zone - - - 
 
 
 
-const testResult: EvalResult = {
-	strategy: {
-	  longPut: {
-		type: 'put',
-		strike: 23,
-		bid: 0,
-		ask: 0.05,
-		probOTM: 0.611728865060338,
-		probITM: 0.38827113493966203
-	  },
-	  shortPut: {
-		type: 'put',
-		strike: 24.5,
-		bid: 0,
-		ask: 0.1,
-		probOTM: 0.5570166495726583,
-		probITM: 0.4429833504273417
-	  },
-	  longCall: {
-		type: 'call',
-		strike: 29,
-		probITM: 0.4085164423058173,
-		probOTM: 0.5914835576941827,
-		bid: 1.15,
-		ask: 1.4
-	  },
-	  shortCall: {
-		type: 'call',
-		strike: 28,
-		probITM: 0.47108539422697737,
-		probOTM: 0.5289146057730226,
-		bid: 2.8,
-		ask: 3.6
-	  }
-	},
-	quantity: 10,
-	collateral: 100,
-	mark: {
-	  expectedValue: 177.5557409679693,
-	  breakEvens: [ 22.55, 28.95 ],
-	  price: 195,
-	  maxLoss: -100
-	},
-	natural: {
-	  expectedValue: -3.0481705776676407,
-	  breakEvens: [ 23.15, 28.35 ],
-	  price: 135,
-	  maxLoss: -65
-	}
-  }
 
 
-const testDate =  new Date("8/30/2024")
+async function evaluateCurrentPositions(ticker: string, expDate: Date, currentPrice: number, meanVolatility: number, meanLogVol: number, logVolStdDev: number, timeToExp: number, maxLoss: number, maxCollateral: number) {
 
-const notionModel = new NotionModel("ASTS",testDate)
+	const notionModel = new NotionModel(ticker, expDate, "", currentPrice, meanVolatility)
 
-notionModel.updateOrPushResult(testResult)
-// notionModel.testFunction()
+	const strategies = await notionModel.getOpenPositions()
+	console.log(strategies)
+
+	const strategyBuilder = new StrategyBuilder(currentPrice, meanVolatility, meanLogVol, logVolStdDev, timeToExp, {}, {}, maxLoss, maxCollateral)
+
+	strategies.forEach(strategy => {
+		let {expectedNaturalValue: currentEx} = strategyBuilder.getVolatilityExpectedValue(strategy.strategy)
+
+		let templateQuantity = 0
+
+		if (Object.keys(strategy.strategy).includes("type")) {
+
+			templateQuantity = StrategyEvaluator.evaluateCreditSpread(strategy.strategy as CreditSpread, maxCollateral, maxLoss).natural.quantity
+
+		} else {
+			templateQuantity = StrategyEvaluator.evaluateIronCondor(strategy.strategy as IronCondor, maxCollateral, maxLoss).natural.quantity
+		}
+
+		console.log({templateQuantity, currentEx})
+		
+		currentEx = (currentEx / templateQuantity) * strategy.currentQuantity
+
+		notionModel.updateCurrentExpectedValue(strategy.pageID, currentEx)
+	})
+
+	
+
+
+	// get all of your current positions
+
+	// change their bid and ask to output the credit you revieved
+}
+
+
+
+
+
+// console.log(daysUntilExp)
+
+// const notionModel = new NotionModel("GME",testDate)
+
+
 

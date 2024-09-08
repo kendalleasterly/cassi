@@ -65,7 +65,7 @@ class TwelveDataModel {
 
     }
 
-    async getVolatilityLogDistribution(): Promise<{meanVolatility: number, logVolatilityStats: {mean: number, stdDev: number}}> {
+    async getVolatilityLogDistribution(): Promise<{meanVolatility: number, logVolatilityStats: {mean: number, stdDev: number}, SMA: number}> {
 
         const avgPrices = await this.getAvgPrices()
         const stdDevs = await this.getStdDevs()
@@ -73,9 +73,13 @@ class TwelveDataModel {
         let volatilities: number[] = []
 
         // convert all of the raw standard deviations to their anualized volatility using the average price from that period
+
+        let sumAvgPrices = 0
+
         Object.keys(avgPrices).forEach(dateTime => {
 
             const price = avgPrices[dateTime]
+            sumAvgPrices+=price
             
             stdDevs[dateTime].forEach(stdDev => {
                 //convert to annualized volatility
@@ -87,7 +91,6 @@ class TwelveDataModel {
                 volatilities.push(annualVolatility)
 
             })
-
         })
 
         let logVolatilities: number[] = []
@@ -96,7 +99,7 @@ class TwelveDataModel {
             logVolatilities.push(Math.log(volatilitiy)) 
         })
 
-        return {meanVolatility: mathjs.mean(volatilities), logVolatilityStats: this.getMeanAndStdDev(logVolatilities)}
+        return {meanVolatility: mathjs.mean(volatilities), logVolatilityStats: this.getMeanAndStdDev(logVolatilities), SMA: (sumAvgPrices / Object.values(avgPrices).length)}
 
     }
 
