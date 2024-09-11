@@ -3,7 +3,7 @@ import { PageObjectResponse, PartialDatabaseObjectResponse } from "@notionhq/cli
 import "dotenv/config"
 import { EvalResult } from "./strategy-evaluator"
 import { OptionLeg } from "./html-parser"
-import { CreditSpread, IronCondor } from "./strategy-builder"
+import { CreditSpread, getExpectedValue, IronCondor } from "./strategy-builder"
 
 const notionSecret = process.env.NOTION_SECRET
 const notion = new Client({auth: notionSecret})
@@ -70,7 +70,7 @@ class NotionModel {
 
         let breakevens: {[key: string]: {number: number}} = {}
 
-        if (Object.keys(result.strategy).includes("type")) { // credit spread
+        if (result.strategy.strategyType == "credit spread") { // credit spread
             const creditSpread = result.strategy as CreditSpread
 
             breakevens[`${creditSpread.type == "call" ? "Call" : "Put"} Breakeven`] = {number: result.natural.breakEvens[0]}
@@ -85,10 +85,10 @@ class NotionModel {
                 number: result.collateral
             },
             "Mark E(x)": {
-                number: result.mark.expectedValue
+                number: getExpectedValue(result.mark)
             },
             "Natural E(x)": {
-                number: result.natural.expectedValue
+                number: getExpectedValue(result.natural)
             },
             "Mark Price": {
                 number: result.mark.price
@@ -132,7 +132,7 @@ class NotionModel {
         let strategyTypeID = ""
         let strategyTitle = ""
 
-        if (Object.keys(strategy).includes("type"))  { //it's a credit spread
+        if (strategy.strategyType == "credit spread")  {
             const creditSpread = strategy as CreditSpread
             if (creditSpread.type == "put") {
 
@@ -272,12 +272,13 @@ class NotionModel {
 
                 const creditSpread: CreditSpread = {
                     shortLeg: {
-                        strike: shortStrike, type: "call", bid: creditRecieved, ask: creditRecieved, probITM: 0, probOTM: 0
+                        strike: shortStrike, type: "call", bid: creditRecieved, ask: creditRecieved
                     }, 
                     longLeg: {
-                        strike: longStrike, type: "call", bid: 0, ask: 0, probITM: 0, probOTM: 0
+                        strike: longStrike, type: "call", bid: 0, ask: 0
                     },
-                    type: isCall ? "call" : "put"
+                    type: isCall ? "call" : "put",
+                    strategyType: "credit spread"
                 }
 
                 results.push({strategy: creditSpread, pageID: result.id, currentQuantity})
@@ -292,17 +293,18 @@ class NotionModel {
 
                 const ironCondor: IronCondor = {
                     longPut: {
-                        strike: longPutStrike, bid: 0, ask: 0, probITM: 0, probOTM: 0, type: "put"
+                        strike: longPutStrike, bid: 0, ask: 0, type: "put"
                     },
                     shortPut: {
-                        strike: shortPutStrike, bid: creditRecieved / 2, ask: creditRecieved / 2, probITM: 0, probOTM: 0, type: "put"
+                        strike: shortPutStrike, bid: creditRecieved / 2, ask: creditRecieved / 2, type: "put"
                     },
                     shortCall: {
-                        strike: shortCallStrike, bid: creditRecieved / 2, ask: creditRecieved / 2, probITM: 0, probOTM: 0, type: "call"
+                        strike: shortCallStrike, bid: creditRecieved / 2, ask: creditRecieved / 2, type: "call"
                     },
                     longCall: {
-                        strike: longCallStrike, bid: 0, ask: 0, probITM: 0, probOTM: 0, type: "call"
+                        strike: longCallStrike, bid: 0, ask: 0, type: "call"
                     },
+                    strategyType: "iron condor"
                 }
 
                 results.push({strategy: ironCondor, pageID: result.id, currentQuantity})

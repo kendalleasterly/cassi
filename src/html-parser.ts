@@ -89,15 +89,15 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
 
                     const value = Number($(spanEl).text().replace("%", ""))
 
-                    switch (property) {
-                        case "PROBABILITY_ITM-cell-value":
-                            currentOption.probITM = value / 100
-                            break;
-                        case "PROBABILITY_OTM-cell-value":
-                            currentOption.probOTM = value / 100
-                            break;
-                        default:
-                    }
+                    // switch (property) {
+                    //     case "PROBABILITY_ITM-cell-value":
+                    //         currentOption.probITM = value / 100
+                    //         break;
+                    //     case "PROBABILITY_OTM-cell-value":
+                    //         currentOption.probOTM = value / 100
+                    //         break;
+                    //     default:
+                    // }
                 }
             })
 
@@ -127,8 +127,6 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
 type OptionLeg = {
     bid: number ,
     ask: number,
-    probOTM: number,
-    probITM: number,
     strike: number
     type: "call" | "put"
     

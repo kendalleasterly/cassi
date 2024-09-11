@@ -43,7 +43,7 @@ function workersGetTopResults(getTopStrategiesPrams: GetTopStrategiesParameters,
 
 					let id = ""
 	
-					if (Object.keys(evalResult.strategy).includes("type")) {  // it's a credit spread 
+					if (evalResult.strategy.strategyType == "credit spread") {  // it's a credit spread 
 	
 						const creditSpread = evalResult.strategy as CreditSpread
 						id = `${creditSpread.shortLeg.strike}-${creditSpread.longLeg.strike}-${creditSpread.type}`
