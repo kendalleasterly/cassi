@@ -1,4 +1,6 @@
 /node_modules
 .env
 deleteme.txt
-/HTML Files
+
+/dist
+/.clinic

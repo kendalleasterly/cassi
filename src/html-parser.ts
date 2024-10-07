@@ -140,20 +140,3 @@ type OptionChain = {
 const HTMLParser = { parseHTML, getTicker }
 
 export { HTMLParser, OptionLeg, OptionChain}
-
-// - - - Not needed - - - 
-// function getStrikes($: cheerio.CheerioAPI) {
-//     let strikes: number[] = []
-
-// 	const strikeRows = $("table.chain-table.chain-table__strike tbody tr") //
-// 	strikeRows.each((i, el) => {
-		
-//         const strike = Number($(el).text())
-//         if (!Number.isNaN(strike)) {
-//             strikes.push(Number(strike))
-//         }
-        
-// 	})
-
-//     return strikes
-// }
