@@ -2,5 +2,6 @@
 .env
 deleteme.txt
 
-/dist
-/.clinic
+
+dist/
+.clinic/
