@@ -3,7 +3,7 @@ import { PageObjectResponse, PartialDatabaseObjectResponse } from "@notionhq/cli
 import "dotenv/config"
 import { EvalResult } from "./strategy-evaluator"
 import { OptionLeg } from "./html-parser"
-import { CreditSpread, getExpectedValue, IronCondor } from "./strategy-builder"
+import { CreditSpread, IronCondor } from "./strategy-builder"
 
 const notionSecret = process.env.NOTION_SECRET
 const notion = new Client({auth: notionSecret})
@@ -85,10 +85,10 @@ class NotionModel {
                 number: result.collateral
             },
             "Mark E(x)": {
-                number: getExpectedValue(result.mark)
+                number: result.mark.expectedValue
             },
             "Natural E(x)": {
-                number: getExpectedValue(result.natural)
+                number: result.natural.expectedValue
             },
             "Mark Price": {
                 number: result.mark.price

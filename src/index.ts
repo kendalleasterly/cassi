@@ -1,5 +1,5 @@
 import { NotionModel, systemSettings } from "./notion"
-import { CreditSpread, getExpectedValue, IronCondor, StrategyBuilder } from "./strategy-builder"
+import { CreditSpread, IronCondor, StrategyBuilder } from "./strategy-builder"
 import { EvalResult, StrategyEvaluator } from "./strategy-evaluator"
 import { TwelveDataModel } from "./twelve-data"
 import { Workers } from "./workers"
@@ -11,42 +11,43 @@ async function main( ticker: string, expDate: Date, maxLoss: number, maxCollater
 
 	const timeToExp = ((expDate.getTime() - (new Date()).getTime()) / (1000 * 60 * 60 * 24)) / 252
 		
-	const twelveDataModel = new TwelveDataModel(ticker, "5min", Math.round(12 * 6.5 * .25))
+	// const twelveDataModel = new TwelveDataModel(ticker, "5min", Math.round(12 * 6.5 * 3))
 
-	let { meanVolatility: rawMeanVolatility, logVolatilityStats: rawLogVolatilityStats, SMA } = await twelveDataModel.getVolatilityLogDistribution()
+	// let { meanVolatility: rawMeanVolatility, logVolatilityStats: rawLogVolatilityStats, SMA } = await twelveDataModel.getVolatilityLogDistribution()
+	let { meanVolatility: rawMeanVolatility, logVolatilityStats: rawLogVolatilityStats, SMA } = {meanVolatility: 1.2127785672404068, logVolatilityStats: { mean: -0.059399358464779804, stdDev: 0.6521987961114166 }, SMA: 26.434182435897448}
 
-	let meanVolatility = rawMeanVolatility * volatilityMultiplier
-	let logVolatilityStats = {
-		mean: rawLogVolatilityStats.mean + Math.log(volatilityMultiplier),
-		stdDev: rawLogVolatilityStats.stdDev + Math.log(volatilityMultiplier)
-	}
+	// let meanVolatility = rawMeanVolatility * volatilityMultiplier
+	// let logVolatilityStats = {
+	// 	mean: rawLogVolatilityStats.mean + Math.log(volatilityMultiplier),
+	// 	stdDev: rawLogVolatilityStats.stdDev + Math.log(volatilityMultiplier)
+	// }
 
-	console.log({ SMA, timeToExp, volatilityMultiplier, meanVolatility, logVolatilityStats })
+	// console.log({ SMA, timeToExp, volatilityMultiplier, meanVolatility, logVolatilityStats })
 	
-	const params = {ticker, maxLoss,maxCollateral, currentPrice: SMA, meanVolatility, meanLogVolatility: logVolatilityStats.mean, stdDevLogVolatility: logVolatilityStats.stdDev, timeToExp,  workerIndex: -1}
-	const {topNaturalResults} = await Workers.workersGetTopResults(params, 25)
+	// const params = {ticker, maxLoss,maxCollateral, currentPrice: SMA, meanVolatility, meanLogVolatility: logVolatilityStats.mean, stdDevLogVolatility: logVolatilityStats.stdDev, timeToExp,  workerIndex: -1}
+	// const {topNaturalResults} = await Workers.workersGetTopResults(params, 25)
 
-	let topResults: EvalResult[] = []
+	// let topResults: EvalResult[] = []
 
-	if (systemSettings.sortingMethod == "Top_Mark_of_Top_Natural") {
+	// if (systemSettings.sortingMethod == "Top_Mark_of_Top_Natural") {
 
-		topResults = [...topNaturalResults].sort((a, b) => {
-			return getExpectedValue(b.mark) - getExpectedValue(a.mark)
-		})
-	} else if (systemSettings.sortingMethod == "Top_Natural") {
+	// 	topResults = [...topNaturalResults].sort((a, b) => {
+	// 		return b.mark.expectedValue - a.mark.expectedValue
+	// 	})
+	// } else if (systemSettings.sortingMethod == "Top_Natural") {
 
-		return [...topNaturalResults]
-	} else if (systemSettings.sortingMethod == "Top_Breakevens") {
+	// 	return [...topNaturalResults]
+	// } else if (systemSettings.sortingMethod == "Top_Breakevens") {
 
-		topResults = [...topNaturalResults].sort((a, b) => {
-			return b.natural.breakEvens[0] - a.natural.breakEvens[0]
-		})
-	}
+	// 	topResults = [...topNaturalResults].sort((a, b) => {
+	// 		return b.natural.breakEvens[0] - a.natural.breakEvens[0]
+	// 	})
+	// }
 	
-	const outputLimit = 5
-	topResults = topResults.slice(0, outputLimit)
+	// const outputLimit = 5
+	// topResults = topResults.slice(0, outputLimit)
 
-	topResults.forEach((result, _) => console.log(result))
+	// topResults.forEach((result, _) => console.log(result))
 
 
 	// const batchTime = String(new Date().getTime())
@@ -60,23 +61,27 @@ async function main( ticker: string, expDate: Date, maxLoss: number, maxCollater
 	
 	// - - - MARK: Testing Zone - - - 
 
-	// const evaluator = new StrategyEvaluator(220.50955649999997, 0.21827436933820818, -1.5784282603227469, 0.35164686712569315, timeToExp, maxLoss, maxCollateral)
+	const evaluator = new StrategyEvaluator(SMA, rawMeanVolatility, rawLogVolatilityStats.mean, rawLogVolatilityStats.stdDev, timeToExp, maxLoss, maxCollateral)
 
-	// const testCreditSpread: CreditSpread = {
-	// 	shortLeg: { type: 'call', strike: 197.5, bid: 23.7, ask: 23.95 },
-	// 	longLeg: { type: 'call', strike: 200, bid: 21.2, ask: 21.45 },
-	// 	type: 'call',
-	// 	strategyType: 'credit spread'
-	//   }
+	const testIronCondor: IronCondor =  {
+	  longPut: { type: 'put', strike: 24, bid: 1.45, ask: 1.55 },
+	  shortPut: { type: 'put', strike: 28, bid: 3.7, ask: 3.9 },
+	  shortCall: { type: 'call', strike: 28.5, bid: 1.3, ask: 1.4 },
+	  longCall: { type: 'call', strike: 29, bid: 1.15, ask: 1.25 },
+	  strategyType: 'iron condor'
+	}
 
-	// console.log(evaluator.getVolatilityExpectedValue(testCreditSpread))
+	
+
+	console.log(evaluator.evaluateIronCondor(testIronCondor, 1.091273508493915))
+
 
 
 }
 
 
 
-const ticker = "AAPL"
+const ticker = "ASTS"
 const expDate = new Date("9/20/2024, 16:00:00")
 main(ticker, expDate, 200, 3000, 1)
 

@@ -25,14 +25,13 @@ class StrategyBuilder {
         public maxCollateral: number
     ) {
         this.stdDevPrice = currentPrice * meanVolatility * Math.sqrt(timeToExp) // already converted to the time period
-        console.log({stdDevPrice: this.stdDevPrice, timeToExp, meanVolatility, currentPrice})
         this.strategyEvaluator = new StrategyEvaluator(currentPrice, meanVolatility, meanLogVol, stdDevLogVol, timeToExp, maxAcceptableLoss, maxCollateral )
     }
 
     
 
 
-    isInBounds(strikePrice: number, isCall: boolean): boolean {
+    isInBounds(strikePrice: number): boolean {
         const lowerBound = this.currentPrice - this.stdDevPrice * 5
         const upperBound = this.currentPrice + this.stdDevPrice * 5
 
@@ -53,16 +52,18 @@ class StrategyBuilder {
 
             optionLegs.forEach((shortLeg, _) => {
                 
-                if (!this.isInBounds(shortLeg.strike, type == "call" )) return
+                if (!this.isInBounds(shortLeg.strike )) return
                 
                 
                 optionLegs.forEach((longLeg, _) => {
         
-                    if (!this.isInBounds(longLeg.strike, type == "call")) return
+                    
+                    if (!this.isInBounds(longLeg.strike)) return
+                    
         
                     if ((type == "put" && longLeg.strike >= shortLeg.strike) || (type == "call" && shortLeg.strike >= longLeg.strike)) return
     
-        
+                    
                     const strategy: CreditSpread = {shortLeg, longLeg, type, strategyType: "credit spread"}
     
                     let templateEvalResult = this.strategyEvaluator.evaluateCreditSpread(strategy, 0) // we do this to easily get the max collateral
@@ -94,30 +95,28 @@ class StrategyBuilder {
     
         startingLongPuts.forEach((longPut, _) => {
             
-            if (!this.isInBounds(longPut.strike, false)) return
+            if (!this.isInBounds(longPut.strike)) return
             
             putOptionArray.forEach((shortPut, _) => {
     
                 if (shortPut.strike <= longPut.strike) return
                 if ((shortPut.strike - longPut.strike) * 100 > this.maxCollateral) return
-                if (!this.isInBounds(shortPut.strike, false)) return
+                if (!this.isInBounds(shortPut.strike)) return
                 
                 callOptionArray.forEach((shortCall, _) => {
     
                     if (shortCall.strike <= shortPut.strike) return
-                    if (!this.isInBounds(shortCall.strike, true)) return
+                    if (!this.isInBounds(shortCall.strike)) return
 
                     
                     callOptionArray.forEach((longCall, _) => {
                         
                         if (longCall.strike <= shortCall.strike) return
-                        if (!this.isInBounds(longCall.strike, true)) return
-                        
+                        if (!this.isInBounds(longCall.strike)) return
     
                         const strategy: IronCondor = {longPut, shortPut, longCall, shortCall, strategyType: "iron condor"}
 
                         let templateEvalResult = this.strategyEvaluator.evaluateIronCondor(strategy, 0)
-
                         if (templateEvalResult.collateral > this.maxCollateral) return
                         if (Math.abs(templateEvalResult.mark.maxLoss) > this.maxAcceptableLoss) return
     
@@ -153,10 +152,6 @@ type IronCondor = Strategy & {
     
 }
 
-function getExpectedValue(subEvalResult: SubEvalResult) {
-    return subEvalResult.expectedGainComponent.expectedPLValue + subEvalResult.expectedLossComponent.expectedPLValue
-}
-
 function getTopResults(allStratagies: EvalResult[], limit: number) {
     let topNaturalResults = [...allStratagies]
     let topMarkResults = [...allStratagies]
@@ -164,11 +159,11 @@ function getTopResults(allStratagies: EvalResult[], limit: number) {
     
 
     topNaturalResults.sort((a, b) => {
-        return getExpectedValue(b.natural) - getExpectedValue(a.natural)
+        return b.natural.expectedValue - a.natural.expectedValue
     })
 
     topMarkResults.sort((a, b) => {
-        return getExpectedValue(b.mark) - getExpectedValue(a.mark)
+        return b.mark.expectedValue - a.mark.expectedValue
     })
 
     topNaturalResults = topNaturalResults.slice(0, limit)
@@ -179,12 +174,12 @@ function getTopResults(allStratagies: EvalResult[], limit: number) {
 
 // We put the parameters for this function into an object because these are getting passed around as messages from Main thread to worker thread
 function buildTopStrategies(p: GetTopStrategiesParameters) {
+    
 	const { callOptions, putOptions } = HTMLParser.parseHTML(
 		`Trade ${p.ticker} _ thinkorswim Web`
 	)
 
 	const strategyBuilder = new StrategyBuilder(p.currentPrice, p.meanVolatility, p.meanLogVolatility, p.stdDevLogVolatility, p.timeToExp, putOptions, callOptions, p.maxLoss, p.maxCollateral)
-	
 	const allCreditSpreads = strategyBuilder.findBestCreditSpread()
 
 	// 	get the all of the put options that are in bounds
@@ -194,7 +189,7 @@ function buildTopStrategies(p: GetTopStrategiesParameters) {
 
 	Object.values({...putOptions}).forEach(optionLeg => {
 
-		if (strategyBuilder.isInBounds(optionLeg.strike, false)) feasiblePutOptions.push(optionLeg) 
+		if (strategyBuilder.isInBounds(optionLeg.strike)) feasiblePutOptions.push(optionLeg) 
 
 	})
 
@@ -203,7 +198,7 @@ function buildTopStrategies(p: GetTopStrategiesParameters) {
 
 	const { topMarkResults, topNaturalResults } = getTopResults( [...allCreditSpreads, ...allIronCondors], 8 )
 
-	console.log( strategyBuilder.strategiesEvaluatedVol, strategyBuilder.strategiesEvaluatedStockPrice )
+	console.log( strategyBuilder.strategyEvaluator.strategiesEvaluatedVol )
 
 	return {topMarkResults, topNaturalResults}
 
@@ -221,4 +216,4 @@ type GetTopStrategiesParameters = {
 	workerIndex: number
 }
 
-export {CreditSpread, IronCondor, StrategyBuilder, GetTopStrategiesParameters, getTopResults, buildTopStrategies, getExpectedValue}
+export {CreditSpread, IronCondor, StrategyBuilder, GetTopStrategiesParameters, getTopResults, buildTopStrategies}

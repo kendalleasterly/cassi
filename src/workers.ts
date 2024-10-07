@@ -11,7 +11,7 @@ if (parentPort) {
         const parentMessage: ThreadMessage = message
     
         const getTopStratsParams = parentMessage.payload as GetTopStrategiesParameters
-    
+		
         const results = buildTopStrategies(getTopStratsParams)
     
         parentPort!.postMessage({type: "data", payload: results})
