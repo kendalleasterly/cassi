@@ -40,7 +40,7 @@ class StrategyBuilder {
     
 
     //
-    findBestCreditSpread(): EvalResult[] {
+    findBestCreditSpreads(): EvalResult[] {
 
         let allStratagies: EvalResult[] = [];
 
@@ -83,11 +83,9 @@ class StrategyBuilder {
     
     }
     
-    findBestIronCondor(startingLongPuts: OptionLeg[]): EvalResult[] {
+    findBestIronCondors(startingLongPuts: OptionLeg[]): EvalResult[] {
         // try not to restrict or filter the options it gives you, because if it is resellient and thinks its timed right, it should be logical enough
     
-        
-
         const putOptionArray = Object.values(this.putOptions)
         const callOptionArray = Object.values(this.callOptions)
     
@@ -134,23 +132,7 @@ class StrategyBuilder {
 
 }
 
-type Strategy = {
-    strategyType: "iron condor" | "credit spread"
-} 
 
-type CreditSpread = Strategy & {
-    shortLeg: OptionLeg
-    longLeg: OptionLeg
-    type: "put" | "call"
-}
-
-type IronCondor = Strategy & {
-    longPut: OptionLeg
-    shortPut: OptionLeg
-    shortCall: OptionLeg
-    longCall: OptionLeg
-    
-}
 
 function getTopResults(allStratagies: EvalResult[], limit: number) {
     let topNaturalResults = [...allStratagies]
@@ -175,12 +157,10 @@ function getTopResults(allStratagies: EvalResult[], limit: number) {
 // We put the parameters for this function into an object because these are getting passed around as messages from Main thread to worker thread
 function buildTopStrategies(p: GetTopStrategiesParameters) {
     
-	const { callOptions, putOptions } = HTMLParser.parseHTML(
-		`Trade ${p.ticker} _ thinkorswim Web`
-	)
+	const { callOptions, putOptions } = HTMLParser.parseHTML(`Trade ${p.ticker} _ thinkorswim Web`)
 
 	const strategyBuilder = new StrategyBuilder(p.currentPrice, p.meanVolatility, p.meanLogVolatility, p.stdDevLogVolatility, p.timeToExp, putOptions, callOptions, p.maxLoss, p.maxCollateral)
-	const allCreditSpreads = strategyBuilder.findBestCreditSpread()
+	const allCreditSpreads = strategyBuilder.findBestCreditSpreads()
 
 	// 	get the all of the put options that are in bounds
 	// give the function the starting put options
@@ -194,7 +174,7 @@ function buildTopStrategies(p: GetTopStrategiesParameters) {
 	})
 
 	const currentOptionLegs = Workers.getLegsForWorker(p.workerIndex, feasiblePutOptions)
-	const allIronCondors = strategyBuilder.findBestIronCondor(currentOptionLegs)
+	const allIronCondors = strategyBuilder.findBestIronCondors(currentOptionLegs)
 
 	const { topMarkResults, topNaturalResults } = getTopResults( [...allCreditSpreads, ...allIronCondors], 8 )
 
@@ -214,6 +194,24 @@ type GetTopStrategiesParameters = {
 	stdDevLogVolatility: number, 
 	timeToExp: number, 
 	workerIndex: number
+}
+
+type Strategy = {
+    strategyType: "iron condor" | "credit spread"
+} 
+
+type CreditSpread = Strategy & {
+    shortLeg: OptionLeg
+    longLeg: OptionLeg
+    type: "put" | "call"
+}
+
+type IronCondor = Strategy & {
+    longPut: OptionLeg
+    shortPut: OptionLeg
+    shortCall: OptionLeg
+    longCall: OptionLeg
+    
 }
 
 export {CreditSpread, IronCondor, StrategyBuilder, GetTopStrategiesParameters, getTopResults, buildTopStrategies}

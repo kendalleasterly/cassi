@@ -70,15 +70,10 @@ class NotionModel {
 
         let breakevens: {[key: string]: {number: number}} = {}
 
-        if (result.strategy.strategyType == "credit spread") { // credit spread
-            const creditSpread = result.strategy as CreditSpread
-
-            breakevens[`${creditSpread.type == "call" ? "Call" : "Put"} Breakeven`] = {number: result.natural.breakEvens[0]}
-           
-        } else { // iron condor
-            breakevens["Put Breakeven"] = {number: Math.min(...result.natural.breakEvens)}
-            breakevens["Call Breakeven"] = {number: Math.max(...result.natural.breakEvens)}
-        }
+        const putBreakeven = result.natural.breakEvens.put
+        const callBreakeven = result.natural.breakEvens.call
+        if (putBreakeven) breakevens["Put Breakeven"] = {number: putBreakeven}
+        if (callBreakeven) breakevens["Call Breakeven"] = {number: callBreakeven}
 
         return {
             Collateral: {

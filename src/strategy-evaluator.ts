@@ -2,7 +2,7 @@ import { OptionLeg } from "./html-parser";
 import { CreditSpread, IronCondor } from "./strategy-builder";
 import * as mathjs from 'mathjs';
 
-const RISK_FREE_RATE = 5.5 / 100
+const RISK_FREE_RATE = 4.5 / 100
 
 class StrategyEvaluator {
 
@@ -33,7 +33,7 @@ class StrategyEvaluator {
         const defaultSubResult: SubEvalResult = {
             expectedGainComponent: {prob: 0, expectedValue: 0},
             expectedLossComponent: {prob: 0, expectedValue: 0},
-            breakEvens: [],
+            breakEvens: {put: null, call: null},
             price: 0,
             maxLoss: 0,
             quantity: 0,
@@ -43,7 +43,7 @@ class StrategyEvaluator {
         let result: EvalResult = {
             strategy, 
             collateral,
-            mark: JSON.parse(JSON.stringify(defaultSubResult)),
+            mark: JSON.parse(JSON.stringify(defaultSubResult)), //Deep copy: prevents referencing the same object in memory
             natural: JSON.parse(JSON.stringify(defaultSubResult))
         };
     
@@ -61,20 +61,20 @@ class StrategyEvaluator {
                 maxGain = (shortLegMark - longLegMark) * 100
             }
 
-            if (maxGain < 0) result[pricingType] = defaultSubResult // eliminate fully negative positions
+            if (maxGain < 0) {
+                result[pricingType] = defaultSubResult 
+                 return // eliminate fully negative positions
+            }
     
             const triangles = this.getTriangleExpectedReturns(shortLeg, longLeg , maxGain, volatility)
 
             const probMaxGain = this.stockPriceCDF(volatility, shortLeg.strike, shortLeg.type == "put" ? 99999999999 : 0)
             const probMaxLoss = this.stockPriceCDF(volatility, longLeg.strike, longLeg.type == "put" ? 0 : 99999999999)
 
-            let maxLoss = -collateral + maxGain
-            //REPAIR: Not always negative, not always worth this value
+            //Sometimes max loss will be positive
+            let maxLoss = maxGain - collateral
 
-            if (maxLoss >= 0) maxLoss = -1 // Sometimes max loss will be 0, as max gain can happen to be equal to collateral.
-
-
-            const quantity = Math.min(Math.floor( this.maxAcceptableLoss  / maxLoss * -1), Math.floor(this.maxCollateral / collateral))
+            const quantity = Math.min(maxLoss >= 0 ? 99999 : Math.floor( this.maxAcceptableLoss  / maxLoss), Math.floor(this.maxCollateral / collateral))
             
             const expectedGain = (probMaxGain * maxGain + triangles.expectedGain) * quantity
             const expectedLoss = (probMaxLoss * maxLoss + triangles.expectedLoss) * quantity
@@ -94,10 +94,10 @@ class StrategyEvaluator {
                 quantity: quantity,
                 expectedGainComponent: {expectedValue: expectedGain, prob: gainProb},
                 expectedLossComponent: {expectedValue: expectedLoss, prob: lossProb},
-                breakEvens: [triangles.breakEven],
+                breakEvens: shortLeg.type == "put" ? {put: triangles.breakEven, call: null} : {put: null, call: triangles.breakEven},
                 maxLoss: maxLoss  * quantity,
                 price: maxGain / 100,
-                expectedValue: 0
+                expectedValue: expectedGain + expectedLoss
             }
             // console.log(gainProb + lossProb)
     
@@ -123,7 +123,7 @@ class StrategyEvaluator {
         const defaultSubResult: SubEvalResult = {
             expectedGainComponent: {prob: 0, expectedValue: 0},
             expectedLossComponent: {prob: 0, expectedValue: 0},
-            breakEvens: [],
+            breakEvens: {put: null, call: null},
             price: 0,
             maxLoss: 0,
             quantity: 0,
@@ -143,6 +143,7 @@ class StrategyEvaluator {
     
         const pricingTypes: ("natural" | "mark")[] = ["natural", "mark"]
         pricingTypes.forEach(pricingType => {
+            console.log("- - - Entering", pricingType, "- - -")
     
             if (pricingType == "natural") {
 
@@ -158,10 +159,15 @@ class StrategyEvaluator {
             
             totalMaxGain = putMaxGain + callMaxGain // In P/L Dollars, already multiplied by 100
 
-            if (totalMaxGain < 0) result[pricingType] = defaultSubResult // eliminate fully negative positions
+            if (totalMaxGain < 0) {
+                result[pricingType] = defaultSubResult 
+                return // eliminate fully negative positions
+            }
     
             const putTriangle = this.getTriangleExpectedReturns(shortPut, longPut, totalMaxGain, volatility)
             const callTriangle = this.getTriangleExpectedReturns(shortCall, longCall, totalMaxGain, volatility)
+
+            console.log({putTriangle, callTriangle})
     
             const probMaxGain = this.stockPriceCDF(volatility, shortPut.strike, shortCall.strike)
             const expectedMaxGain = totalMaxGain * probMaxGain
@@ -171,26 +177,23 @@ class StrategyEvaluator {
             const probPutMaxLoss = this.stockPriceCDF(volatility, 0, longPut.strike)
             const probCallMaxLoss = this.stockPriceCDF(volatility, longCall.strike, 999999999)
     
-            const expectedPutMaxLoss = ( -(shortPut.strike - longPut.strike) * 100 + totalMaxGain) * probPutMaxLoss
-            const expectedCallMaxLoss = ( -(longCall.strike - shortCall.strike) * 100 + totalMaxGain) * probCallMaxLoss
+            const expectedPutMaxLoss = (totalMaxGain - (shortPut.strike - longPut.strike) * 100) * probPutMaxLoss
+            const expectedCallMaxLoss = (totalMaxGain - (longCall.strike - shortCall.strike) * 100) * probCallMaxLoss
     
-            let maxLoss = -Math.max( (longCall.strike - shortCall.strike) * 100 - totalMaxGain, (shortPut.strike - longPut.strike) * 100 - totalMaxGain)
-            //REPAIR Not always negative, not always 
-            if (maxLoss >= 0) maxLoss = -1 // Sometimes max loss will be 0, as max gain can happen to be equal to collateral.
-            const quantity = Math.min(Math.floor( this.maxAcceptableLoss  / maxLoss * -1), Math.floor(this.maxCollateral / collateral))
+            let maxLoss = Math.min(totalMaxGain - (shortPut.strike - longPut.strike) * 100, totalMaxGain - (longCall.strike - shortCall.strike) * 100 )
+
+            //TODO: Not always negative, not always 
+            
+            const quantity = Math.min(maxLoss >= 0 ? 9999 : Math.floor(this.maxAcceptableLoss / maxLoss), Math.floor(this.maxCollateral / collateral))
 
             const expectedGain = (putTriangle.expectedGain + expectedMaxGain + callTriangle.expectedGain) * quantity
             const expectedLoss = (expectedPutMaxLoss + putTriangle.expectedLoss + callTriangle.expectedLoss + expectedCallMaxLoss) * quantity
 
             const probGain = putTriangle.gainProb + probMaxGain + callTriangle.gainProb
             const probLoss = probPutMaxLoss + putTriangle.lossProb + callTriangle.lossProb + probCallMaxLoss
-            console.log(putTriangle.gainProb, {probMaxGain}, callTriangle.gainProb)
-            console.log(this.stockPriceCDF(volatility, putTriangle.breakEven, shortPut.strike), this.stockPriceCDF(volatility, shortPut.strike, shortCall.strike),this.stockPriceCDF(volatility, callTriangle.breakEven, shortPut.strike),  )
-            console.log(probPutMaxLoss, putTriangle.lossProb, callTriangle.lossProb, probCallMaxLoss)
-            console.log(this.stockPriceCDF(volatility, 0, longPut.strike), this.stockPriceCDF(volatility, longPut.strike, putTriangle.breakEven),this.stockPriceCDF(volatility, callTriangle.breakEven, longCall.strike),this.stockPriceCDF(volatility, longCall.strike, 999999999)  )
     
             if (volatility != 0 && (isNaN(expectedGain) || isNaN(expectedLoss) || isNaN(quantity))) {
-                console.log("Expected return or quantity was NAN", {strategy})
+                console.error("Expected return or quantity was NAN", {strategy})
             }
     
             let subEvalResult: SubEvalResult = {
@@ -198,7 +201,7 @@ class StrategyEvaluator {
                 expectedGainComponent: {expectedValue: expectedGain, prob: probGain},
                 expectedLossComponent: {expectedValue: expectedLoss, prob: probLoss},
                 expectedValue: expectedGain + expectedLoss,
-                breakEvens: [Math.min(putTriangle.breakEven, callTriangle.breakEven), Math.max(putTriangle.breakEven, callTriangle.breakEven)], 
+                breakEvens: {put: putTriangle.breakEven, call: callTriangle.breakEven},
                 price: totalMaxGain / 100,
                 maxLoss: maxLoss * quantity
             }
@@ -215,33 +218,34 @@ class StrategyEvaluator {
     /** 
     * Uses a Reimann sum to calculate an expected value of the triangles in between strikes
     * 
-    * @param {number} maxGain In P/L Dollars, Already multiplied by 100. Per 100 Shares, or 1 contract
+    * @param {number} maxGain In P/L Dollars, Already multiplied by 100 (Per 100 Shares, or 1 contract).
     **/
-    private getTriangleExpectedReturns(shortLeg: OptionLeg, longLeg: OptionLeg, maxGain: number, volatility: number ): {expectedGain: number, gainProb: number, expectedLoss: number, lossProb: number, breakEven: number} {
-        //find the breakeven
-
+    private getTriangleExpectedReturns(shortLeg: OptionLeg, longLeg: OptionLeg, maxGain: number, volatility: number ): {expectedGain: number, gainProb: number, expectedLoss: number, lossProb: number, breakEven: number | null}  {
         const type = shortLeg.type
 
-        // Breakeven signifies when the position should worth 0, since someone could execute our short for the same amount as our net credit recieved
-        const breakEven = shortLeg.strike + (maxGain) * (type == "put" ? -1 : 1) / 100 // division by 100 to caclulate the max gain per share
-        
-        // Yet, If the breakeven we've calculated is actually past the long strike, then the long leg has already started making money for us, so any further losses on the short leg don't matter
-        // Which necessarily means that in this case, where breakeven is past long strike, then there is no Loss. There is no breakeven. prob of loss should be zero. (we know it is gain only because we've prevented fully negative positions)
-        const isFullyPositive = type == "put" ? breakEven < longLeg.strike : breakEven > longLeg.strike
+        // Breakeven signifies when the position should be worth 0, since someone could execute our short for the same amount as our net credit recieved
+        let breakEven: null | number = null
+
+        //Check if breakeven exists: If max loss is positive, then there isn't a breakeven
+
+        const maxLoss = maxGain - Math.abs(shortLeg.strike - longLeg.strike)*100
+        if (maxLoss < 0) {
+            breakEven = shortLeg.strike + (maxGain * (type == "put" ? -1 : 1) / 100) // division by 100 to caclulate the max gain per share
+        }
+
+        console.log({maxLoss, breakEven, maxGain})
 
         // 10 slices per triagngle, two triangles: one on either side of the breakeven
         let expectedGain = 0
         let expectedLoss = 0
 
-        //TODO: Delete the folloiwng:
         let gainProb = 0
         let lossProb = 0
-        //End Delete
 
         const SLICE_COUNT = 10
 
         const strikeArray = [shortLeg.strike]
-        if (isFullyPositive) strikeArray.push(longLeg.strike)
+        if (breakEven) strikeArray.push(longLeg.strike)
 
         strikeArray.forEach(strike => {
 
@@ -249,34 +253,33 @@ class StrategyEvaluator {
             let maximum = -99999
 
             for (let i = 0; i < SLICE_COUNT; i++) {
-                const strikeWidth = (isFullyPositive ? longLeg.strike - shortLeg.strike  : strike - breakEven) / SLICE_COUNT // Also indicates direction: Move FROM the breakeven (or short leg) TO the strike (or long leg). When strike is to right of breakeven then width indicates positive movement, and vice verssa. 
+                const distance = (breakEven ? strike - breakEven : longLeg.strike - shortLeg.strike) // Also indicates direction: Move FROM the breakeven TO the strike (if no breakeven, FROM short TO long). When start location is to right of end location then width indicates positive movement, and vice verssa. 
+                const strikeWidth = distance / SLICE_COUNT 
 
-                const currentStrikePosition = (isFullyPositive ? shortLeg.strike : breakEven) + strikeWidth * i
+                const currentStrikePosition = (breakEven ? breakEven : shortLeg.strike) + strikeWidth * i
                 const nextStrikePosition = currentStrikePosition + strikeWidth
                 // - - - Testing, Delete when done - - - 
-                minimum = Math.min(minimum, currentStrikePosition)
-                maximum = Math.max(maximum, currentStrikePosition)
-                minimum = Math.min(minimum, nextStrikePosition)
-                maximum = Math.max(maximum, nextStrikePosition)
+                minimum = Math.min(minimum, currentStrikePosition, nextStrikePosition)
+                maximum = Math.max(maximum, currentStrikePosition, nextStrikePosition)
                 /// - - - End Testing - - - 
 
                 const midpointStrikePosition = (currentStrikePosition + nextStrikePosition) / 2
                 
-                const midpointPLValue = (Math.abs(shortLeg.strike - midpointStrikePosition) * -1) * 100 + maxGain // multiply by -1 to signifity that the difference in short leg and whichever in-between price is how much the short leg has *lost*.
-                // Will be negative if the value of position dips below the max gain
+                const shortCallLoss = Math.abs(shortLeg.strike - midpointStrikePosition) // (could be pos or neg depending on call or put)
+                const midpointPLValue = maxGain - shortCallLoss * 100 
 
-                const probWidth = this.stockPriceCDF(volatility, currentStrikePosition, nextStrikePosition)
+                const probArea = this.stockPriceCDF(volatility, currentStrikePosition, nextStrikePosition)
 
                 if (shortLeg.strike == strike) { // This is the short leg
-                    expectedGain += midpointPLValue * probWidth
-                    gainProb+=probWidth
+                    expectedGain += midpointPLValue * probArea
+                    gainProb+=probArea
                 } else {
-                    expectedLoss += midpointPLValue * probWidth
-                    lossProb+=probWidth
+                    expectedLoss += midpointPLValue * probArea
+                    lossProb+=probArea
                 }
             }
 
-            console.log({minimum, maximum, breakEven, strike})
+            console.log({minimum, maximum, breakEven, strike}) 
 
         })
 
@@ -293,14 +296,14 @@ class StrategyEvaluator {
         const width = this.stdDevLogVol / factor
         const steps = factor * 8 // 8 stdDev in either direction
 
-        let finalEvalResult: EvalResult = strategy.strategyType == "credit spread" ?  this.evaluateCreditSpread(strategy as CreditSpread, 0) : this.evaluateIronCondor(strategy as IronCondor, 0)
+        let finalResult: EvalResult = strategy.strategyType == "credit spread" ?  this.evaluateCreditSpread(strategy as CreditSpread, 0) : this.evaluateIronCondor(strategy as IronCondor, 0)
         
         const defaultComponent: ExpectedValueComponent = {expectedValue: 0, prob: 0}
         
-        finalEvalResult.mark.expectedGainComponent = {...defaultComponent}
-        finalEvalResult.mark.expectedLossComponent = {...defaultComponent}
-        finalEvalResult.natural.expectedGainComponent = {...defaultComponent}
-        finalEvalResult.natural.expectedLossComponent = {...defaultComponent}
+        finalResult.mark.expectedGainComponent = {...defaultComponent}
+        finalResult.mark.expectedLossComponent = {...defaultComponent}
+        finalResult.natural.expectedGainComponent = {...defaultComponent}
+        finalResult.natural.expectedLossComponent = {...defaultComponent}
 
         ;[-1, 1].forEach(direction => {
 
@@ -341,19 +344,19 @@ class StrategyEvaluator {
                     addTo.prob += addFrom.prob * volatilityProbWidth
                 }
 
-                addExpectedValueComponent(finalEvalResult.mark.expectedGainComponent, evalResult.mark.expectedGainComponent)
-                addExpectedValueComponent(finalEvalResult.mark.expectedLossComponent, evalResult.mark.expectedLossComponent)
-                addExpectedValueComponent(finalEvalResult.natural.expectedGainComponent, evalResult.natural.expectedGainComponent)
-                addExpectedValueComponent(finalEvalResult.natural.expectedLossComponent, evalResult.natural.expectedLossComponent)
+                addExpectedValueComponent(finalResult.mark.expectedGainComponent, evalResult.mark.expectedGainComponent)
+                addExpectedValueComponent(finalResult.mark.expectedLossComponent, evalResult.mark.expectedLossComponent)
+                addExpectedValueComponent(finalResult.natural.expectedGainComponent, evalResult.natural.expectedGainComponent)
+                addExpectedValueComponent(finalResult.natural.expectedLossComponent, evalResult.natural.expectedLossComponent)
             }
         })
 
         // calculate the final expected value for mark and natural
 
-        finalEvalResult.mark.expectedValue = finalEvalResult.mark.expectedGainComponent.expectedValue + finalEvalResult.mark.expectedLossComponent.expectedValue 
-        finalEvalResult.natural.expectedValue = finalEvalResult.natural.expectedGainComponent.expectedValue + finalEvalResult.natural.expectedLossComponent.expectedValue 
+        finalResult.mark.expectedValue = finalResult.mark.expectedGainComponent.expectedValue + finalResult.mark.expectedLossComponent.expectedValue 
+        finalResult.natural.expectedValue = finalResult.natural.expectedGainComponent.expectedValue + finalResult.natural.expectedLossComponent.expectedValue 
         
-        return finalEvalResult
+        return finalResult
 
     }
 
@@ -404,7 +407,7 @@ type SubEvalResult = {
     expectedGainComponent: ExpectedValueComponent,
     expectedLossComponent: ExpectedValueComponent,
     maxLoss: number,
-    breakEvens: number[]
+    breakEvens: {put: number | null, call: number | null}
     quantity: number
 }
 

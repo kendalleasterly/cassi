@@ -82,8 +82,10 @@ async function main( ticker: string, expDate: Date, maxLoss: number, maxCollater
 
 
 const ticker = "ASTS"
-const expDate = new Date("9/20/2024, 16:00:00")
-main(ticker, expDate, 200, 3000, 1)
+const expDate = new Date("11/5/2024, 16:00:00")
+main(ticker, expDate, -200, 3000, 1)
+
+
 
 
 
