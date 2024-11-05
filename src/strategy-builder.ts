@@ -4,7 +4,6 @@ import { EvalResult, StrategyEvaluator, SubEvalResult } from "./strategy-evaluat
 import { Workers } from "./workers";
 
 
-const RISK_FREE_RATE = 5.5 / 100
 
 class StrategyBuilder {
 
@@ -32,8 +31,8 @@ class StrategyBuilder {
 
 
     isInBounds(strikePrice: number): boolean {
-        const lowerBound = this.currentPrice - this.stdDevPrice * 5
-        const upperBound = this.currentPrice + this.stdDevPrice * 5
+        const lowerBound = this.currentPrice - this.stdDevPrice * 4
+        const upperBound = this.currentPrice + this.stdDevPrice * 4
 
         return strikePrice <= upperBound && strikePrice >= lowerBound
     }
@@ -69,7 +68,7 @@ class StrategyBuilder {
                     let templateEvalResult = this.strategyEvaluator.evaluateCreditSpread(strategy, 0) // we do this to easily get the max collateral
     
                     if (templateEvalResult.collateral > this.maxCollateral) return
-                    if (Math.abs(templateEvalResult.mark.maxLoss) > this.maxAcceptableLoss) return
+                    if (templateEvalResult.mark.maxLoss < this.maxAcceptableLoss) return
                     
                     const evalResult = this.strategyEvaluator.getVolatilityExpectedValue(strategy)
                     
@@ -90,6 +89,7 @@ class StrategyBuilder {
         const callOptionArray = Object.values(this.callOptions)
     
         let allStratagies: EvalResult[] = []
+        // return allStratagies
     
         startingLongPuts.forEach((longPut, _) => {
             
@@ -111,12 +111,14 @@ class StrategyBuilder {
                         
                         if (longCall.strike <= shortCall.strike) return
                         if (!this.isInBounds(longCall.strike)) return
+                        
     
                         const strategy: IronCondor = {longPut, shortPut, longCall, shortCall, strategyType: "iron condor"}
 
                         let templateEvalResult = this.strategyEvaluator.evaluateIronCondor(strategy, 0)
                         if (templateEvalResult.collateral > this.maxCollateral) return
-                        if (Math.abs(templateEvalResult.mark.maxLoss) > this.maxAcceptableLoss) return
+                        if (templateEvalResult.mark.maxLoss < this.maxAcceptableLoss ) return
+                        
     
                         const evalResult = this.strategyEvaluator.getVolatilityExpectedValue(strategy)
 

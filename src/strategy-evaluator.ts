@@ -2,7 +2,8 @@ import { OptionLeg } from "./html-parser";
 import { CreditSpread, IronCondor } from "./strategy-builder";
 import * as mathjs from 'mathjs';
 
-const RISK_FREE_RATE = 4.5 / 100
+const RISK_FREE_RATE = 5.5 / 100
+const ACCURACY_FACTOR = 5 * 2 // Should be a multiple of 2
 
 class StrategyEvaluator {
 
@@ -23,6 +24,10 @@ class StrategyEvaluator {
         console.log(this.stdDevPrice)
     }
 
+    /***
+     * @param {number} volatility
+     * 
+     */
     evaluateCreditSpread(strategy: CreditSpread, volatility: number): EvalResult {
     
         const shortLeg = strategy.shortLeg
@@ -74,7 +79,7 @@ class StrategyEvaluator {
             //Sometimes max loss will be positive
             let maxLoss = maxGain - collateral
 
-            const quantity = Math.min(maxLoss >= 0 ? 99999 : Math.floor( this.maxAcceptableLoss  / maxLoss), Math.floor(this.maxCollateral / collateral))
+            const quantity = Math.min((maxLoss >= 0 ? 99999 : Math.floor( this.maxAcceptableLoss  / maxLoss)), Math.floor(this.maxCollateral / collateral))
             
             const expectedGain = (probMaxGain * maxGain + triangles.expectedGain) * quantity
             const expectedLoss = (probMaxLoss * maxLoss + triangles.expectedLoss) * quantity
@@ -99,7 +104,6 @@ class StrategyEvaluator {
                 price: maxGain / 100,
                 expectedValue: expectedGain + expectedLoss
             }
-            // console.log(gainProb + lossProb)
     
             if (pricingType == "natural") {
                 result.natural = subEvalResult
@@ -112,6 +116,10 @@ class StrategyEvaluator {
     
     }
 
+    /**
+     * 
+     * @param volatility The regular, annualized volatility to be used for probability calculations. NOT the log volatility
+     */
     evaluateIronCondor(strategy: IronCondor, volatility: number): EvalResult {
         const longPut = strategy.longPut
         const shortPut = strategy.shortPut
@@ -143,7 +151,6 @@ class StrategyEvaluator {
     
         const pricingTypes: ("natural" | "mark")[] = ["natural", "mark"]
         pricingTypes.forEach(pricingType => {
-            console.log("- - - Entering", pricingType, "- - -")
     
             if (pricingType == "natural") {
 
@@ -166,8 +173,6 @@ class StrategyEvaluator {
     
             const putTriangle = this.getTriangleExpectedReturns(shortPut, longPut, totalMaxGain, volatility)
             const callTriangle = this.getTriangleExpectedReturns(shortCall, longCall, totalMaxGain, volatility)
-
-            console.log({putTriangle, callTriangle})
     
             const probMaxGain = this.stockPriceCDF(volatility, shortPut.strike, shortCall.strike)
             const expectedMaxGain = totalMaxGain * probMaxGain
@@ -196,17 +201,16 @@ class StrategyEvaluator {
                 console.error("Expected return or quantity was NAN", {strategy})
             }
     
-            let subEvalResult: SubEvalResult = {
+            let subEvalResult: SubEvalResult = { // All use quantity in calculation
                 quantity: quantity,
                 expectedGainComponent: {expectedValue: expectedGain, prob: probGain},
                 expectedLossComponent: {expectedValue: expectedLoss, prob: probLoss},
                 expectedValue: expectedGain + expectedLoss,
                 breakEvens: {put: putTriangle.breakEven, call: callTriangle.breakEven},
-                price: totalMaxGain / 100,
+                price: totalMaxGain / 100, // Per contract, doesn't need quantity
                 maxLoss: maxLoss * quantity
             }
 
-            // console.log(probGain + probLoss)
     
             result[pricingType] = subEvalResult
 
@@ -233,8 +237,6 @@ class StrategyEvaluator {
             breakEven = shortLeg.strike + (maxGain * (type == "put" ? -1 : 1) / 100) // division by 100 to caclulate the max gain per share
         }
 
-        console.log({maxLoss, breakEven, maxGain})
-
         // 10 slices per triagngle, two triangles: one on either side of the breakeven
         let expectedGain = 0
         let expectedLoss = 0
@@ -242,15 +244,12 @@ class StrategyEvaluator {
         let gainProb = 0
         let lossProb = 0
 
-        const SLICE_COUNT = 10
+        const SLICE_COUNT = ACCURACY_FACTOR / 2
 
         const strikeArray = [shortLeg.strike]
         if (breakEven) strikeArray.push(longLeg.strike)
 
         strikeArray.forEach(strike => {
-
-            let minimum = 99999
-            let maximum = -99999
 
             for (let i = 0; i < SLICE_COUNT; i++) {
                 const distance = (breakEven ? strike - breakEven : longLeg.strike - shortLeg.strike) // Also indicates direction: Move FROM the breakeven TO the strike (if no breakeven, FROM short TO long). When start location is to right of end location then width indicates positive movement, and vice verssa. 
@@ -258,10 +257,6 @@ class StrategyEvaluator {
 
                 const currentStrikePosition = (breakEven ? breakEven : shortLeg.strike) + strikeWidth * i
                 const nextStrikePosition = currentStrikePosition + strikeWidth
-                // - - - Testing, Delete when done - - - 
-                minimum = Math.min(minimum, currentStrikePosition, nextStrikePosition)
-                maximum = Math.max(maximum, currentStrikePosition, nextStrikePosition)
-                /// - - - End Testing - - - 
 
                 const midpointStrikePosition = (currentStrikePosition + nextStrikePosition) / 2
                 
@@ -279,8 +274,6 @@ class StrategyEvaluator {
                 }
             }
 
-            console.log({minimum, maximum, breakEven, strike}) 
-
         })
 
         return {expectedGain, expectedLoss, breakEven, gainProb, lossProb}
@@ -290,11 +283,9 @@ class StrategyEvaluator {
     getVolatilityExpectedValue(strategy: IronCondor | CreditSpread): EvalResult {
         
         this.strategiesEvaluatedVol++
-        // console.log(this.strategiesEvaluatedVol)
 
-        const factor = 20
-        const width = this.stdDevLogVol / factor
-        const steps = factor * 8 // 8 stdDev in either direction
+        const width = this.stdDevLogVol / ACCURACY_FACTOR
+        const steps = ACCURACY_FACTOR * 2 // 8 stdDev in either direction
 
         let finalResult: EvalResult = strategy.strategyType == "credit spread" ?  this.evaluateCreditSpread(strategy as CreditSpread, 0) : this.evaluateIronCondor(strategy as IronCondor, 0)
         
@@ -318,7 +309,7 @@ class StrategyEvaluator {
                 let volatilityProbWidth = Math.abs(this.normCDF(z_1) - this.normCDF(z_2))
 
                 // Find the midpoint, and use that as the estimation. Note: Midpoint Riemann sum is best for approximating here, as trapezoidal would take much more computation
-                const newVol = Math.exp((newLogVol + nextLogVol) / 2)
+                const regularMidpointVol = Math.exp((newLogVol + nextLogVol) / 2)
 
                 
                 let evalResult: EvalResult | undefined = undefined
@@ -326,12 +317,12 @@ class StrategyEvaluator {
                 if (strategy.strategyType == "credit spread") {
 
                     const creditSpread = strategy as CreditSpread
-                    evalResult = this.evaluateCreditSpread(creditSpread, newVol)
+                    evalResult = this.evaluateCreditSpread(creditSpread, regularMidpointVol)
                     
                 } else {
 
                     const ironCondor = strategy as IronCondor
-                    evalResult = this.evaluateIronCondor(ironCondor, newVol)
+                    evalResult = this.evaluateIronCondor(ironCondor, regularMidpointVol)
 
                 }
 
@@ -348,6 +339,17 @@ class StrategyEvaluator {
                 addExpectedValueComponent(finalResult.mark.expectedLossComponent, evalResult.mark.expectedLossComponent)
                 addExpectedValueComponent(finalResult.natural.expectedGainComponent, evalResult.natural.expectedGainComponent)
                 addExpectedValueComponent(finalResult.natural.expectedLossComponent, evalResult.natural.expectedLossComponent)
+
+                
+                const markSum = evalResult.mark.expectedGainComponent.prob + evalResult.mark.expectedLossComponent.prob
+                if (( markSum >= 1.001 || markSum <= 0.999) && markSum != 0) {
+                    console.log(evalResult)
+                }
+
+                const naturalSum = evalResult.natural.expectedGainComponent.prob + evalResult.natural.expectedLossComponent.prob
+                if ( (naturalSum >= 1.001 || naturalSum <= 0.999) && naturalSum != 0 ) {
+                    console.log(evalResult)
+                }
             }
         })
 
@@ -367,6 +369,7 @@ class StrategyEvaluator {
     /**
      * probabiltiy that future stock price will be between two stock price
      * @param {number} r - The risk-free interest rate
+     * @param {number} volatility The volatility in regular, annualized format (Do NOT pass in the log volatility version.)
      * @returns {number} The cumulative probability between the given prices
      */
     

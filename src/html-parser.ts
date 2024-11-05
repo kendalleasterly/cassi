@@ -51,9 +51,8 @@ function getOptions($: cheerio.CheerioAPI): OptionChain {
             const firstProperty = $(rowEl).find("div.value").get()[0]
             const ariaLabel = $(firstProperty).attr("aria-label") //We could extract all necessary info from the aria labels in each td, but it doesn't seem reliable
 
-            const regex = /Strike (\d+.?\d),/
+            const regex = /Strike (\d+.?\d?),/
             const match = ariaLabel?.match(regex)![1]
-            // console.log({ariaLabel})
             currentOption.strike = Number(match)
 
             const tdEl = $(rowEl).find("td").get()[0]

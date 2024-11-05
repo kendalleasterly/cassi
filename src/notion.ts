@@ -97,6 +97,36 @@ class NotionModel {
             "Natural Max Loss": {
                 number: result.natural.maxLoss
             },
+            "Natural Kelly Gain": {
+                number: result.natural.expectedGainComponent.expectedValue / result.natural.expectedGainComponent.prob
+            },
+            "Natural Kelly Loss": {
+                number: result.natural.expectedLossComponent.expectedValue / result.natural.expectedLossComponent.prob
+            },
+            "Mark Kelly Gain": {
+                number: result.mark.expectedGainComponent.expectedValue / result.mark.expectedGainComponent.prob
+            },
+            "Mark Kelly Loss": {
+                number: result.mark.expectedLossComponent.expectedValue / result.mark.expectedLossComponent.prob
+            },
+            "Prob Natural Kelly Gain": {
+                number: result.natural.expectedGainComponent.prob
+            },
+            "Prob Natural Kelly Loss": {
+                number: result.natural.expectedLossComponent.prob
+            },
+            "Prob Mark Kelly Gain": {
+                number: result.mark.expectedGainComponent.prob
+            },
+            "Prob Mark Kelly Loss": {
+                number: result.mark.expectedLossComponent.prob
+            },
+            "Natural Suggested Quantity": {
+                number: result.natural.quantity
+            },
+            "Mark Suggested Quantity": {
+                number: result.mark.quantity
+            },
             ...breakevens
         }
     }
@@ -255,7 +285,7 @@ class NotionModel {
 
             const creditRecieved = properties["Execution Price"].number as number
             const currentQuantity = properties["Execution Quantity"].number as number
-            const type = properties["Strategy Type"]["select"]["name"] as string
+            const type = properties["Strategy Type"]["select"]["name"] as string // "Call Credit Spread" | "Put Credit Spread"
 
             // reconstruct it into the strategy
 
@@ -309,13 +339,26 @@ class NotionModel {
         return results
     }
 
-    async updateCurrentExpectedValue(pageID: string, currentEx: number) {
+    async updateCurrentExpectedValues(pageID: string, evalResult: EvalResult) {
         await notion.pages.update({
             page_id: pageID,
             properties: {
                 "Current E(X)": {
-                    number: currentEx
-                }
+                    number: evalResult.natural.expectedValue
+                },
+                "Execution Kelly Gain": {
+                    number: evalResult.natural.expectedGainComponent.expectedValue / evalResult.natural.expectedGainComponent.prob
+                },
+                "Execution Kelly Loss": {
+                    number: evalResult.natural.expectedLossComponent.expectedValue / evalResult.natural.expectedLossComponent.prob
+                },
+                "Execution Prob Kelly Gain": {
+                    number: evalResult.natural.expectedGainComponent.prob
+                },
+                "Execution Prob Kelly Loss": {
+                    number: evalResult.natural.expectedLossComponent.prob
+                },
+
             }
         })
     }
@@ -352,7 +395,7 @@ function richText(text: string) {
 let systemSettings: {
 	sortingMethod: "Top_Mark_of_Top_Natural" | "Top_Breakevens" | "Top_Natural"
 } = {
-	sortingMethod: "Top_Mark_of_Top_Natural",
+	sortingMethod: "Top_Natural",
 }
 
 
